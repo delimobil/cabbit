@@ -3,7 +3,7 @@ package ru.delimobil.cabbit.client
 import java.util.concurrent.Executors
 
 import cats.effect.Blocker
-import cats.effect.Concurrent
+import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
 import cats.effect.Resource
 import cats.effect.Sync
@@ -14,7 +14,7 @@ import ru.delimobil.cabbit.algebra.ChannelOnPool
 import ru.delimobil.cabbit.algebra.ChannelPublisher
 import ru.delimobil.cabbit.algebra.Connection
 
-final class RabbitClientConnection[F[_]: Concurrent: ContextShift](
+final class RabbitClientConnection[F[_]: ConcurrentEffect: ContextShift](
   raw: client.Connection
 ) extends Connection[F] {
 

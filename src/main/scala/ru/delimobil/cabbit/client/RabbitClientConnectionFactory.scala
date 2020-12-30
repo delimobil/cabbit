@@ -1,6 +1,6 @@
 package ru.delimobil.cabbit.client
 
-import cats.effect.Concurrent
+import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
 import cats.effect.Resource
 import cats.effect.Sync
@@ -11,7 +11,7 @@ import ru.delimobil.cabbit.config.Fs2RabbitConfig
 
 import scala.jdk.CollectionConverters._
 
-final class RabbitClientConnectionFactory[F[_]: Concurrent: ContextShift](config: Fs2RabbitConfig) extends ConnectionFactory[F] {
+final class RabbitClientConnectionFactory[F[_]: ConcurrentEffect: ContextShift](config: Fs2RabbitConfig) extends ConnectionFactory[F] {
 
   private val factory = new client.ConnectionFactory()
 

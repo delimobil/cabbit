@@ -21,5 +21,5 @@ trait ChannelConsumer[F[_]] extends ChannelAcker[F] {
   def deliveryStream(
     queueName: QueueName,
     prefetchCount: Int
-  )(implicit eval: F ~> Id): F[(ConsumerTag, Stream[F, client.Delivery])]
+  ): F[(ConsumerTag, Stream[F, client.Delivery])]
 }

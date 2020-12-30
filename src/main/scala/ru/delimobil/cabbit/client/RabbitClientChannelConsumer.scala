@@ -1,7 +1,6 @@
 package ru.delimobil.cabbit.client
 
 import cats.Id
-import cats.effect.Concurrent
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.option._
@@ -15,8 +14,10 @@ import ru.delimobil.cabbit.algebra.ChannelOnPool
 import ru.delimobil.cabbit.algebra.ConsumerTag
 import ru.delimobil.cabbit.algebra.DeliveryTag
 import ru.delimobil.cabbit.algebra.QueueName
+import cats.effect.ConcurrentEffect
+import cats.effect.syntax.all._
 
-final class RabbitClientChannelConsumer[F[_]: Concurrent](
+final class RabbitClientChannelConsumer[F[_]: ConcurrentEffect](
   channelOnPool: ChannelOnPool[F]
 ) extends ChannelConsumer[F] {
 
@@ -35,7 +36,7 @@ final class RabbitClientChannelConsumer[F[_]: Concurrent](
   def deliveryStream(
     queueName: QueueName,
     prefetchCount: Int
-  )(implicit eval: F ~> Id): F[(ConsumerTag, Stream[F, client.Delivery])] =
+  ): F[(ConsumerTag, Stream[F, client.Delivery])] =
     for {
       _ <- basicQos(prefetchCount)
       queue <- Queue.boundedNoneTerminated[F, client.Delivery](prefetchCount)
@@ -46,9 +47,9 @@ final class RabbitClientChannelConsumer[F[_]: Concurrent](
 
   private def getCallbacks(
     queue: NoneTerminatedQueue[F, client.Delivery]
-  )(implicit eval: F ~> Id): (client.CancelCallback, client.DeliverCallback) = {
-    val cancelCallback: client.CancelCallback = _ => eval(queue.enqueue1(none))
-    val deliverCallback: client.DeliverCallback = (_, delivery) => eval(queue.enqueue1(delivery.some))
+  ): (client.CancelCallback, client.DeliverCallback) = {
+    val cancelCallback: client.CancelCallback = _ => queue.enqueue1(none).toIO.unsafeRunSync()
+    val deliverCallback: client.DeliverCallback = (_, delivery) => queue.enqueue1(delivery.some).toIO.unsafeRunSync()
     (cancelCallback, deliverCallback)
   }
 

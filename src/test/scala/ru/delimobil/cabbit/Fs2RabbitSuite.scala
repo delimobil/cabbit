@@ -39,8 +39,6 @@ class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
   implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
   implicit val timer: Timer[IO] = IO.timer(ExecutionContext.global)
-  def eval[A](io: IO[A]): A = io.unsafeRunSync()
-  implicit val ioEvaluator: IO ~> Id = FunctionK.lift(eval)
 
   val connectionResource: Resource[IO, Connection[IO]] =
     for {
