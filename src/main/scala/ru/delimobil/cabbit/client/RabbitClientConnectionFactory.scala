@@ -11,7 +11,9 @@ import ru.delimobil.cabbit.config.Fs2RabbitConfig
 
 import scala.jdk.CollectionConverters._
 
-final class RabbitClientConnectionFactory[F[_]: ConcurrentEffect: ContextShift](config: Fs2RabbitConfig) extends ConnectionFactory[F] {
+final class RabbitClientConnectionFactory[F[_]: ConcurrentEffect: ContextShift](
+  config: Fs2RabbitConfig
+) extends ConnectionFactory[F] {
 
   private val factory = new client.ConnectionFactory()
 
