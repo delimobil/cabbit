@@ -1,7 +1,5 @@
 package ru.delimobil.cabbit.algebra
 
-import cats.Id
-import cats.~>
 import com.rabbitmq.client
 import com.rabbitmq.client.GetResponse
 import fs2.Stream

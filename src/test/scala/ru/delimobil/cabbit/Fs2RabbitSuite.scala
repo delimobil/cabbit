@@ -2,8 +2,6 @@ package ru.delimobil.cabbit
 
 import java.util.UUID
 
-import cats.Id
-import cats.arrow.FunctionK
 import cats.data.NonEmptyList
 import cats.effect.ContextShift
 import cats.effect.IO
@@ -11,7 +9,6 @@ import cats.effect.Resource
 import cats.effect.Timer
 import cats.instances.list._
 import cats.syntax.traverse._
-import cats.~>
 import com.rabbitmq.client.AMQP.BasicProperties
 import com.rabbitmq.client.BuiltinExchangeType
 import io.circe.Json
@@ -22,6 +19,7 @@ import ru.delimobil.cabbit.algebra.BodyEncoder.instances.jsonGzip
 import ru.delimobil.cabbit.algebra.ChannelOnPool
 import ru.delimobil.cabbit.algebra.Connection
 import ru.delimobil.cabbit.algebra.ContentEncoding._
+import ru.delimobil.cabbit.algebra.QueueName
 import ru.delimobil.cabbit.config.Fs2RabbitConfig
 import ru.delimobil.cabbit.config.Fs2RabbitConfig.Fs2RabbitNodeConfig
 import ru.delimobil.cabbit.config.declaration.AutoDeleteConfig
@@ -34,6 +32,9 @@ import ru.delimobil.cabbit.config.declaration.QueueDeclaration
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+import ru.delimobil.cabbit.algebra.ExchangeName
+import ru.delimobil.cabbit.algebra.RoutingKey
+import ru.delimobil.cabbit.algebra.DeliveryTag
 
 class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
@@ -60,7 +61,7 @@ class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   def getDeclarations(uuid: UUID): (ExchangeDeclaration, QueueDeclaration, BindDeclaration) = {
     val exchange =
       ExchangeDeclaration(
-        s"the-exchange-$uuid",
+        ExchangeName(s"the-exchange-$uuid"),
         BuiltinExchangeType.DIRECT,
         DurableConfig.NonDurable,
         AutoDeleteConfig.AutoDelete,
@@ -70,14 +71,14 @@ class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
     val queue =
       QueueDeclaration(
-        s"the-queue-$uuid",
+        QueueName(s"the-queue-$uuid"),
         DurableConfig.NonDurable,
         ExclusiveConfig.NonExclusive,
         AutoDeleteConfig.AutoDelete,
         Map.empty
       )
 
-    val binding = BindDeclaration(queue.queueName, exchange.exchangeName, "the-key")
+    val binding = BindDeclaration(queue.queueName, exchange.exchangeName, RoutingKey("the-key"))
 
     (exchange, queue, binding)
   }
@@ -93,17 +94,20 @@ class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     } yield (exchange, queue, binding)
 
   test("queue declaration returns state") {
-    connection.createChannelOnPool.use { channel =>
-      for {
-        declarations <- declare(channel)
-        (_, queue, _) = declarations
-        declarationChannel = connection.channelDeclaration(channel)
-        declareResult <- declarationChannel.queueDeclare(queue)
-        _ = assert(declareResult.getQueue == queue.queueName)
-        _ = assert(declareResult.getConsumerCount == 0)
-        _ = assert(declareResult.getMessageCount == 0)
-      } yield {}
-    }
+    val action =
+      connection.createChannelOnPool.use { channel =>
+        for {
+          declarations <- declare(channel)
+          (_, queue, _) = declarations
+          declarationChannel = connection.channelDeclaration(channel)
+          declareResult <- declarationChannel.queueDeclare(queue)
+          _ = assert(declareResult.getQueue == queue.queueName.name)
+          _ = assert(declareResult.getConsumerCount == 0)
+          _ = assert(declareResult.getMessageCount == 0)
+        } yield {}
+      }
+
+    action.unsafeRunSync()
   }
 
   private def channelWithPublishedMessage(
@@ -170,7 +174,7 @@ class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
       val consumer = connection.channelConsumer(channel)
       for {
         response <- consumer.basicGet(queue.queueName, autoAck = false)
-        _ <- consumer.basicReject(response.getEnvelope.getDeliveryTag, requeue = true)
+        _ <- consumer.basicReject(DeliveryTag(response.getEnvelope.getDeliveryTag), requeue = true)
         declareOk <- declaration.queueDeclare(queue)
         bodyResponse = parse(decodeUtf8(ungzip(response.getBody).getOrElse(???))).getOrElse(???)
         _ = assert(bodyResponse == Json.fromString(message))
@@ -188,7 +192,7 @@ class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
       val consumer = connection.channelConsumer(channel)
       for {
         response <- consumer.basicGet(queue.queueName, autoAck = false)
-        _ <- consumer.basicReject(response.getEnvelope.getDeliveryTag, requeue = false)
+        _ <- consumer.basicReject(DeliveryTag(response.getEnvelope.getDeliveryTag), requeue = false)
         declareOk <- declaration.queueDeclare(queue)
         bodyResponse = parse(decodeUtf8(ungzip(response.getBody).getOrElse(???))).getOrElse(???)
         _ = assert(bodyResponse == Json.fromString(message))
@@ -212,7 +216,7 @@ class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         _ = assert(declareOk.getMessageCount == 49)
         streamedMessages <-
           stream
-            .evalTap(delivery => consumer.basicAck(delivery.getEnvelope.getDeliveryTag, multiple = false))
+            .evalTap(delivery => consumer.basicAck(DeliveryTag(delivery.getEnvelope.getDeliveryTag), multiple = false))
             .take(100)
             .compile
             .toList
@@ -237,7 +241,7 @@ class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         _ = assert(declareOk.getMessageCount == 1)
         deliveries <- stream.take(1).compile.toList
         delivery = deliveries.head
-        _ <- consumer.basicReject(delivery.getEnvelope.getDeliveryTag, requeue = true)
+        _ <- consumer.basicReject(DeliveryTag(delivery.getEnvelope.getDeliveryTag), requeue = true)
         declareOk2 <- declaration.queueDeclare(queue)
         _ = assert(declareOk2.getMessageCount == 1)
       } yield {}

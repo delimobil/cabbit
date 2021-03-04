@@ -1,10 +1,8 @@
 package ru.delimobil.cabbit.client
 
-import cats.Id
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.option._
-import cats.~>
 import com.rabbitmq.client
 import fs2.Stream
 import fs2.concurrent.NoneTerminatedQueue
@@ -21,17 +19,18 @@ final class RabbitClientChannelConsumer[F[_]: ConcurrentEffect](
   channelOnPool: ChannelOnPool[F]
 ) extends ChannelConsumer[F] {
 
-  def basicQos(prefetchCount: Int): F[Unit] = channelOnPool.delay(_.basicQos(prefetchCount))
+  def basicQos(prefetchCount: Int): F[Unit] =
+    channelOnPool.delay(_.basicQos(prefetchCount))
 
   def basicConsume(
     queueName: QueueName,
     deliverCallback: client.DeliverCallback,
     cancelCallback: client.CancelCallback
   ): F[ConsumerTag] =
-    channelOnPool.delay(_.basicConsume(queueName, deliverCallback, cancelCallback))
+    channelOnPool.delay(_.basicConsume(queueName.name, deliverCallback, cancelCallback)).map(ConsumerTag)
 
   def basicGet(queue: QueueName, autoAck: Boolean): F[client.GetResponse] =
-    channelOnPool.delay(_.basicGet(queue, autoAck))
+    channelOnPool.delay(_.basicGet(queue.name, autoAck))
 
   def deliveryStream(
     queueName: QueueName,
@@ -54,14 +53,14 @@ final class RabbitClientChannelConsumer[F[_]: ConcurrentEffect](
   }
 
   def basicAck(deliveryTag: DeliveryTag, multiple: Boolean): F[Unit] =
-    channelOnPool.delay(_.basicAck(deliveryTag, multiple))
+    channelOnPool.delay(_.basicAck(deliveryTag.number, multiple))
 
   def basicNack(deliveryTag: DeliveryTag, multiple: Boolean, requeue: Boolean): F[Unit] =
-    channelOnPool.delay(_.basicNack(deliveryTag, multiple, requeue))
+    channelOnPool.delay(_.basicNack(deliveryTag.number, multiple, requeue))
 
   def basicReject(deliveryTag: DeliveryTag, requeue: Boolean): F[Unit] =
-    channelOnPool.delay(_.basicReject(deliveryTag, requeue))
+    channelOnPool.delay(_.basicReject(deliveryTag.number, requeue))
 
   def basicCancel(consumerTag: ConsumerTag): F[Unit] =
-    channelOnPool.delay(_.basicCancel(consumerTag))
+    channelOnPool.delay(_.basicCancel(consumerTag.name))
 }

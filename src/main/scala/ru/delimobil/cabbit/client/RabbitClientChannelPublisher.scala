@@ -33,6 +33,6 @@ final class RabbitClientChannelPublisher[F[_]](
         .contentEncoding(encoder.contentType.raw)
         .build()
 
-    channelOnPool.delay(_.basicPublish(exchangeName, routingKey, mandatory, props, encoder.encode(body)))
+    channelOnPool.delay(_.basicPublish(exchangeName.name, routingKey.name, mandatory, props, encoder.encode(body)))
   }
 }

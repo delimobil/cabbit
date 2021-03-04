@@ -18,32 +18,32 @@ final class RabbitClientChannelDeclaration[F[_]: Functor](
   def queueDeclare(queueDeclaration: QueueDeclaration): F[client.AMQP.Queue.DeclareOk] =
     channelOnPool.delay {
       _.queueDeclare(
-        queueDeclaration.queueName,
+        queueDeclaration.queueName.name,
         queueDeclaration.durable.bool,
         queueDeclaration.exclusive.bool,
         queueDeclaration.autoDelete.bool,
-        queueDeclaration.arguments.asJava
+        queueDeclaration.arguments.asJava,
       )
     }
 
   def exchangeDeclare(exchangeDeclaration: ExchangeDeclaration): F[Unit] =
     channelOnPool.delay {
       _.exchangeDeclare(
-        exchangeDeclaration.exchangeName,
+        exchangeDeclaration.exchangeName.name,
         exchangeDeclaration.exchangeType,
         exchangeDeclaration.durable.bool,
         exchangeDeclaration.autoDelete.bool,
         exchangeDeclaration.internal.bool,
-        exchangeDeclaration.arguments.asJava
+        exchangeDeclaration.arguments.asJava,
       )
     }.void
 
   def queueBind(bindDeclaration: BindDeclaration): F[Unit] =
     channelOnPool.delay {
       _.queueBind(
-        bindDeclaration.queueName,
-        bindDeclaration.exchangeName,
-        bindDeclaration.routingKey
+        bindDeclaration.queueName.name,
+        bindDeclaration.exchangeName.name,
+        bindDeclaration.routingKey.name,
       )
     }.void
 }

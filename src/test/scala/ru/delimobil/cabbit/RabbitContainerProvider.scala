@@ -6,7 +6,7 @@ import com.dimafeng.testcontainers.RabbitMQContainer
 import ru.delimobil.cabbit.config.Fs2RabbitConfig.Host
 import ru.delimobil.cabbit.config.Fs2RabbitConfig.Port
 
-class RabbitContainerProvider {
+class RabbitContainerProvider private {
 
   private val container: RabbitMQContainer = RabbitMQContainer()
 
@@ -20,10 +20,5 @@ class RabbitContainerProvider {
 object RabbitContainerProvider {
 
   def resource[F[_]: Sync]: Resource[F, RabbitContainerProvider] =
-    Resource {
-      Sync[F].delay {
-        val provider = new RabbitContainerProvider
-        (provider, Sync[F].delay(provider.container.stop()))
-      }
-    }
+    Resource.make(Sync[F].delay(new RabbitContainerProvider))(provider => Sync[F].delay(provider.container.stop()))
 }

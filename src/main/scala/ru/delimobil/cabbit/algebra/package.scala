@@ -2,13 +2,13 @@ package ru.delimobil.cabbit
 
 package object algebra {
 
-  type QueueName = String
+  case class QueueName(name: String) extends AnyVal
 
-  type ExchangeName = String
+  case class ExchangeName(name: String) extends AnyVal
 
-  type RoutingKey = String
+  case class RoutingKey(name: String) extends AnyVal
 
-  type ConsumerTag = String
+  case class ConsumerTag(name: String) extends AnyVal
 
-  type DeliveryTag = Long
+  case class DeliveryTag(number: Long) extends AnyVal
 }
