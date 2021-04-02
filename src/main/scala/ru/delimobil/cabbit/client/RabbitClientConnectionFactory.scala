@@ -23,7 +23,7 @@ final class RabbitClientConnectionFactory[F[_]: ConcurrentEffect: ContextShift](
   factory.setVirtualHost(config.virtualHost)
   factory.setConnectionTimeout(config.connectionTimeout)
   factory.setAutomaticRecoveryEnabled(config.automaticRecovery)
-  if (config.sslConfig.ssl) config.sslConfig.specificProtocol.fold(factory.useSslProtocol())(factory.useSslProtocol)
+  if (config.sslConfig.ssl) config.sslConfig.context.fold(factory.useSslProtocol())(factory.useSslProtocol)
   factory.setSaslConfig(config.sslConfig.saslConfig)
   config.username.foreach(factory.setUsername)
   config.password.foreach(factory.setPassword)

@@ -1,9 +1,11 @@
 package ru.delimobil.cabbit.config
 
 import cats.data.NonEmptyList
+import cats.syntax.option._
 import com.rabbitmq.client.DefaultSaslConfig
 import com.rabbitmq.client.SaslConfig
 import ru.delimobil.cabbit.config.CabbitConfig._
+import javax.net.ssl.SSLContext
 
 /** @param automaticRecovery <a href="https://www.rabbitmq.com/api-guide.html#recovery"> */
 case class CabbitConfig(
@@ -26,7 +28,7 @@ object CabbitConfig {
 
   case class SslConfig(
     ssl: Boolean,
-    specificProtocol: Option[String],
+    context: Option[SSLContext],
     saslConfig: SaslConfig,
   )
 
@@ -35,8 +37,15 @@ object CabbitConfig {
     val default: SslConfig =
       SslConfig(
         ssl = false,
-        specificProtocol = None,
+        context = none,
         saslConfig = DefaultSaslConfig.PLAIN,
+      )
+
+    def external(context: SSLContext) =
+      SslConfig(
+        ssl = true,
+        context.some,
+        saslConfig = DefaultSaslConfig.EXTERNAL,
       )
   }
 }
