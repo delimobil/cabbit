@@ -3,8 +3,8 @@ package ru.delimobil.cabbit
 import cats.effect.Resource
 import cats.effect.Sync
 import com.dimafeng.testcontainers.RabbitMQContainer
-import ru.delimobil.cabbit.config.Fs2RabbitConfig.Host
-import ru.delimobil.cabbit.config.Fs2RabbitConfig.Port
+import ru.delimobil.cabbit.config.CabbitConfig.Host
+import ru.delimobil.cabbit.config.CabbitConfig.Port
 
 class RabbitContainerProvider private {
 
