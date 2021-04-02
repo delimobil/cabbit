@@ -12,11 +12,11 @@ import ru.delimobil.cabbit.config.declaration.QueueDeclaration
 import scala.jdk.CollectionConverters._
 
 final class RabbitClientChannelDeclaration[F[_]: Functor](
-  channelOnPool: ChannelOnPool[F]
+  channel: ChannelOnPool[F],
 ) extends ChannelDeclaration[F] {
 
   def queueDeclare(queueDeclaration: QueueDeclaration): F[client.AMQP.Queue.DeclareOk] =
-    channelOnPool.delay {
+    channel.delay {
       _.queueDeclare(
         queueDeclaration.queueName.name,
         queueDeclaration.durable.bool,
@@ -27,7 +27,7 @@ final class RabbitClientChannelDeclaration[F[_]: Functor](
     }
 
   def exchangeDeclare(exchangeDeclaration: ExchangeDeclaration): F[Unit] =
-    channelOnPool.delay {
+    channel.delay {
       _.exchangeDeclare(
         exchangeDeclaration.exchangeName.name,
         exchangeDeclaration.exchangeType,
@@ -39,7 +39,7 @@ final class RabbitClientChannelDeclaration[F[_]: Functor](
     }.void
 
   def queueBind(bindDeclaration: BindDeclaration): F[Unit] =
-    channelOnPool.delay {
+    channel.delay {
       _.queueBind(
         bindDeclaration.queueName.name,
         bindDeclaration.exchangeName.name,

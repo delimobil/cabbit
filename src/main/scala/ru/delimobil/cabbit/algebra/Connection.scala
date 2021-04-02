@@ -4,11 +4,9 @@ import cats.effect.Resource
 
 trait Connection[F[_]] {
 
-  def createChannelOnPool: Resource[F, ChannelOnPool[F]]
+  def createChannelDeclaration: Resource[F, ChannelDeclaration[F]]
 
-  def channelDeclaration(channel: ChannelOnPool[F]): ChannelDeclaration[F]
+  def createChannelPublisher: Resource[F, ChannelPublisher[F]]
 
-  def channelPublisher(channel: ChannelOnPool[F]): ChannelPublisher[F]
-
-  def channelConsumer(channel: ChannelOnPool[F]): ChannelConsumer[F]
+  def createChannelConsumer: Resource[F, ChannelConsumer[F]]
 }

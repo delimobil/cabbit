@@ -9,6 +9,7 @@ import cats.effect.Resource
 import cats.effect.Timer
 import cats.instances.list._
 import cats.syntax.traverse._
+import cats.syntax.apply._
 import com.rabbitmq.client.AMQP.BasicProperties
 import com.rabbitmq.client.BuiltinExchangeType
 import io.circe.Json
@@ -20,8 +21,8 @@ import ru.delimobil.cabbit.algebra.ChannelOnPool
 import ru.delimobil.cabbit.algebra.Connection
 import ru.delimobil.cabbit.algebra.ContentEncoding._
 import ru.delimobil.cabbit.algebra.QueueName
-import ru.delimobil.cabbit.config.Fs2RabbitConfig
-import ru.delimobil.cabbit.config.Fs2RabbitConfig.Fs2RabbitNodeConfig
+import ru.delimobil.cabbit.config.CabbitConfig
+import ru.delimobil.cabbit.config.CabbitConfig.CabbitNodeConfig
 import ru.delimobil.cabbit.config.declaration.AutoDeleteConfig
 import ru.delimobil.cabbit.config.declaration.BindDeclaration
 import ru.delimobil.cabbit.config.declaration.DurableConfig
@@ -32,6 +33,8 @@ import ru.delimobil.cabbit.config.declaration.QueueDeclaration
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+import ru.delimobil.cabbit.algebra.ChannelDeclaration
+import ru.delimobil.cabbit.algebra.ChannelConsumer
 import ru.delimobil.cabbit.algebra.ExchangeName
 import ru.delimobil.cabbit.algebra.RoutingKey
 import ru.delimobil.cabbit.algebra.DeliveryTag
@@ -45,8 +48,8 @@ class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     for {
       container <- RabbitContainerProvider.resource[IO]
       config =
-        Fs2RabbitConfig(
-          NonEmptyList.one(Fs2RabbitNodeConfig(container.host, container.port)),
+        CabbitConfig(
+          NonEmptyList.one(CabbitNodeConfig(container.host, container.port)),
           virtualHost = "/",
           connectionTimeout = 10,
           username = None,
@@ -83,11 +86,10 @@ class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     (exchange, queue, binding)
   }
 
-  def declare(channel: ChannelOnPool[IO]): IO[(ExchangeDeclaration, QueueDeclaration, BindDeclaration)] =
+  def declare(declaration: ChannelDeclaration[IO]): IO[(ExchangeDeclaration, QueueDeclaration, BindDeclaration)] =
     for {
       declarations <- IO.delay(getDeclarations(UUID.randomUUID()))
       (exchange, queue, binding) = declarations
-      declaration = connection.channelDeclaration(channel)
       _ <- declaration.exchangeDeclare(exchange)
       _ <- declaration.queueDeclare(queue)
       _ <- declaration.queueBind(binding)
@@ -95,12 +97,11 @@ class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
   test("queue declaration returns state") {
     val action =
-      connection.createChannelOnPool.use { channel =>
+      connection.createChannelDeclaration.use { channel =>
         for {
           declarations <- declare(channel)
           (_, queue, _) = declarations
-          declarationChannel = connection.channelDeclaration(channel)
-          declareResult <- declarationChannel.queueDeclare(queue)
+          declareResult <- channel.queueDeclare(queue)
           _ = assert(declareResult.getQueue == queue.queueName.name)
           _ = assert(declareResult.getConsumerCount == 0)
           _ = assert(declareResult.getMessageCount == 0)
@@ -112,22 +113,18 @@ class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
   private def channelWithPublishedMessage(
     messages: List[String]
-  )(f: (ChannelOnPool[IO], QueueDeclaration) => IO[Unit]): Unit = {
-    val twoChannels =
-      for {
-        consumerChannel <- connection.createChannelOnPool
-        publisherChannel <- connection.createChannelOnPool
-      } yield (consumerChannel, publisherChannel)
-
+  )(assertF: (ChannelDeclaration[IO], ChannelConsumer[IO], QueueDeclaration) => IO[Unit]): Unit = {
+    val tuple = (connection.createChannelDeclaration, connection.createChannelConsumer, connection.createChannelPublisher)
     val action =
-      twoChannels.use { case(consumerChannel, publisherChannel) =>
+      tuple
+      .tupled
+      .use { case (declaration, consumerChannel, publisherChannel) =>
         for {
-          declarations <- declare(publisherChannel)
+          declarations <- declare(declaration)
           (_, queue, bind) = declarations
-          publisher = connection.channelPublisher(publisherChannel)
           _ <-
             messages.traverse { message =>
-              publisher.basicPublish(
+              publisherChannel.basicPublish(
                 bind.exchangeName,
                 bind.routingKey,
                 new BasicProperties,
@@ -136,7 +133,7 @@ class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
               )
             }
           _ <- IO.sleep(50.millis)
-          _ <- f(consumerChannel, queue)
+          _ <- assertF(declaration, consumerChannel, queue)
         } yield {}
       }
 
@@ -144,17 +141,14 @@ class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("publisher publishes") {
-    channelWithPublishedMessage(List("hello from fs2-rabbit")) { case (channel, queue) =>
-      val consumer = connection.channelDeclaration(channel)
-      consumer.queueDeclare(queue).map(declareResult => assert(declareResult.getMessageCount == 1))
+    channelWithPublishedMessage(List("hello from fs2-rabbit")) { case (declaration, _, queue) =>
+      declaration.queueDeclare(queue).map(declareResult => assert(declareResult.getMessageCount == 1))
     }
   }
 
   test("consumer gets") {
     val message = "hello from fs2-rabbit"
-    channelWithPublishedMessage(List(message)) { case (channel, queue) =>
-      val declaration = connection.channelDeclaration(channel)
-      val consumer = connection.channelConsumer(channel)
+    channelWithPublishedMessage(List(message)) { case (declaration, consumer, queue) =>
       for {
         response <- consumer.basicGet(queue.queueName, autoAck = true)
         declareOk <- declaration.queueDeclare(queue)
@@ -169,9 +163,7 @@ class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   test("consumer rejects get with requeue") {
     val message = "hello from fs2-rabbit"
 
-    channelWithPublishedMessage(List(message)) { case (channel, queue) =>
-      val declaration = connection.channelDeclaration(channel)
-      val consumer = connection.channelConsumer(channel)
+    channelWithPublishedMessage(List(message)) { case (declaration, consumer, queue) =>
       for {
         response <- consumer.basicGet(queue.queueName, autoAck = false)
         _ <- consumer.basicReject(DeliveryTag(response.getEnvelope.getDeliveryTag), requeue = true)
@@ -187,9 +179,7 @@ class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   test("consumer rejects get without requeue") {
     val message = "hello from fs2-rabbit"
 
-    channelWithPublishedMessage(List(message)) { case (channel, queue) =>
-      val declaration = connection.channelDeclaration(channel)
-      val consumer = connection.channelConsumer(channel)
+    channelWithPublishedMessage(List(message)) { case (declaration, consumer, queue) =>
       for {
         response <- consumer.basicGet(queue.queueName, autoAck = false)
         _ <- consumer.basicReject(DeliveryTag(response.getEnvelope.getDeliveryTag), requeue = false)
@@ -205,9 +195,7 @@ class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   test("consumer consumes") {
     val messages = (1 to 100).map(i => s"hello from fs2-rabbit-$i").toList
 
-    channelWithPublishedMessage(messages) { case(channel, queue) =>
-      val declaration = connection.channelDeclaration(channel)
-      val consumer = connection.channelConsumer(channel)
+    channelWithPublishedMessage(messages) { case (declaration, consumer, queue) =>
       for {
         deliveryStream <- consumer.deliveryStream(queue.queueName, prefetchCount = 51)
         (_, stream) = deliveryStream
@@ -231,9 +219,7 @@ class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   test("consumer requeue on consume") {
     val messages = (1 to 2).map(i => s"hello from fs2-rabbit-$i").toList
 
-    channelWithPublishedMessage(messages) { case(channel, queue) =>
-      val declaration = connection.channelDeclaration(channel)
-      val consumer = connection.channelConsumer(channel)
+    channelWithPublishedMessage(messages) { case(declaration, consumer, queue) =>
       for {
         deliveryStream <- consumer.deliveryStream(queue.queueName, prefetchCount = 1)
         (consumerTag, stream) = deliveryStream

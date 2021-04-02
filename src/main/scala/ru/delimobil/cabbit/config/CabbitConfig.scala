@@ -3,11 +3,11 @@ package ru.delimobil.cabbit.config
 import cats.data.NonEmptyList
 import com.rabbitmq.client.DefaultSaslConfig
 import com.rabbitmq.client.SaslConfig
-import ru.delimobil.cabbit.config.Fs2RabbitConfig._
+import ru.delimobil.cabbit.config.CabbitConfig._
 
 /** @param automaticRecovery <a href="https://www.rabbitmq.com/api-guide.html#recovery"> */
-case class Fs2RabbitConfig(
-  nodes: NonEmptyList[Fs2RabbitNodeConfig],
+case class CabbitConfig(
+  nodes: NonEmptyList[CabbitNodeConfig],
   virtualHost: String,
   connectionTimeout: Int,
   username: Option[String],
@@ -16,13 +16,13 @@ case class Fs2RabbitConfig(
   automaticRecovery: Boolean = true,
 )
 
-object Fs2RabbitConfig {
+object CabbitConfig {
 
   type Host = String
 
   type Port = Int
 
-  case class Fs2RabbitNodeConfig(host: Host, port: Port)
+  case class CabbitNodeConfig(host: Host, port: Port)
 
   case class SslConfig(
     ssl: Boolean,
