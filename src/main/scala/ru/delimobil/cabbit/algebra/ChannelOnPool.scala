@@ -2,7 +2,7 @@ package ru.delimobil.cabbit.algebra
 
 import com.rabbitmq.client
 
-trait ChannelOnPool[F[_]] {
+private[cabbit] trait ChannelOnPool[F[_]] {
 
   def delay[V](f: client.Channel => V): F[V]
 
