@@ -22,17 +22,15 @@ final class RabbitClientConnection[F[_]: ConcurrentEffect: ContextShift](
 
   private val getChannelExecutor =
     Sync[F].delay(
-      Executors.newSingleThreadExecutor(
-        runnable => {
-          val thread = new Thread(runnable, s"rabbit-client-channel-${math.abs(hashCode)}")
-          thread.setDaemon(true)
-          thread
-        }
-      )
+      Executors.newSingleThreadExecutor(runnable => {
+        val thread = new Thread(runnable, s"rabbit-client-channel-${math.abs(hashCode)}")
+        thread.setDaemon(true)
+        thread
+      })
     )
 
   def createChannelDeclaration: Resource[F, ChannelDeclaration[F]] =
-    createChannelOnPool.map(ch => new RabbitClientChannelDeclaration[F](ch))    
+    createChannelOnPool.map(ch => new RabbitClientChannelDeclaration[F](ch))
 
   def createChannelPublisher: Resource[F, ChannelPublisher[F]] =
     createChannelOnPool.map(ch => new RabbitClientChannelPublisher[F](ch))

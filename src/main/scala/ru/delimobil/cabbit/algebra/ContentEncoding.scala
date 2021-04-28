@@ -45,7 +45,7 @@ object ContentEncoding {
     val buffer = new Array[Byte](1024)
     val byteOutputStream = new ByteArrayOutputStream()
     var len = 0
-    while({
+    while ({
       len = gzipInputStream.read(buffer)
       len > 0
     }) {
