@@ -13,11 +13,7 @@ import ru.delimobil.cabbit.config.CabbitConfig.CabbitNodeConfig
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import ru.delimobil.cabbit.algebra.ChannelDeclaration
-import ru.delimobil.cabbit.algebra.ChannelConsumer
-import ru.delimobil.cabbit.algebra.ExchangeName
-import ru.delimobil.cabbit.algebra.RoutingKey
-import ru.delimobil.cabbit.algebra.DeliveryTag
+import scala.util.Random
 
 class Fs2RabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)

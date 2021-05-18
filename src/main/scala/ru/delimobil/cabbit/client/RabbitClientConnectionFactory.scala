@@ -21,7 +21,7 @@ final class RabbitClientConnectionFactory[F[_]: ConcurrentEffect: ContextShift](
   factory.setHost(firstNode.host)
   factory.setPort(firstNode.port)
   factory.setVirtualHost(config.virtualHost)
-  factory.setConnectionTimeout(config.connectionTimeout)
+  factory.setConnectionTimeout(config.connectionTimeout.toMillis.toInt)
   factory.setAutomaticRecoveryEnabled(config.automaticRecovery)
   if (config.sslConfig.ssl) config.sslConfig.context.fold(factory.useSslProtocol())(factory.useSslProtocol)
   factory.setSaslConfig(config.sslConfig.saslConfig)
