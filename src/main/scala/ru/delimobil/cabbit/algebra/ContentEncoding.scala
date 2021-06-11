@@ -13,9 +13,9 @@ case class ContentEncoding(raw: String) extends AnyVal
 
 object ContentEncoding {
 
-  val utf8Encoding: ContentEncoding = ContentEncoding("utf-8")
-
   val GzippedEncoding: ContentEncoding = ContentEncoding("gzip")
+
+  val IdentityEncoding: ContentEncoding = ContentEncoding("identity")
 
   def encodeUtf8(string: String): Array[Byte] = string.getBytes(StandardCharsets.UTF_8)
 
