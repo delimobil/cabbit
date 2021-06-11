@@ -7,4 +7,6 @@ object ContentType {
   val JsonContentType: ContentType = ContentType("application/json")
 
   val TextContentType: ContentType = ContentType("text/plain")
+
+  val ProtobufContentType: ContentType = ContentType("application/protobuf")
 }

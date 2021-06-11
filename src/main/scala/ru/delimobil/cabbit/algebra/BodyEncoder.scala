@@ -23,7 +23,7 @@ object BodyEncoder {
 
         def contentType: ContentType = TextContentType
 
-        def contentEncoding: ContentEncoding = utf8Encoding
+        def contentEncoding: ContentEncoding = IdentityEncoding
 
         def encode(body: String): Array[Byte] = encodeUtf8(body)
       }
@@ -38,12 +38,22 @@ object BodyEncoder {
         def encode(body: String): Array[Byte] = gzip(encodeUtf8(body))
       }
 
+    implicit val protobuf: BodyEncoder[Array[Byte]] =
+      new BodyEncoder[Array[Byte]] {
+
+        def contentType: ContentType = ProtobufContentType
+
+        def contentEncoding: ContentEncoding = IdentityEncoding
+
+        def encode(body: Array[Byte]): Array[Byte] = body
+      }
+
     implicit def jsonUtf8[V: Encoder]: BodyEncoder[V] =
       new BodyEncoder[V] {
 
         def contentType: ContentType = JsonContentType
 
-        def contentEncoding: ContentEncoding = utf8Encoding
+        def contentEncoding: ContentEncoding = IdentityEncoding
 
         def encode(body: V): Array[Byte] = encodeUtf8(body.asJson.noSpaces)
       }
