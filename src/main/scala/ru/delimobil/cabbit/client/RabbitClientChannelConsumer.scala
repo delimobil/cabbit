@@ -39,8 +39,7 @@ final class RabbitClientChannelConsumer[F[_]: ConcurrentEffect](
     for {
       _ <- basicQos(prefetchCount)
       queue <- Queue.boundedNoneTerminated[F, client.Delivery](prefetchCount)
-      callbacks = getCallbacks(queue)
-      (cancel, deliver) = callbacks
+      (cancel, deliver) = getCallbacks(queue)
       tag <- basicConsume(queueName, deliver, cancel)
     } yield (tag, queue.dequeue)
 

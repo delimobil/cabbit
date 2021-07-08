@@ -5,6 +5,8 @@ import cats.syntax.functor._
 import com.rabbitmq.client
 import ru.delimobil.cabbit.algebra.ChannelDeclaration
 import ru.delimobil.cabbit.algebra.ChannelOnPool
+import ru.delimobil.cabbit.algebra.ExchangeName
+import ru.delimobil.cabbit.algebra.QueueName
 import ru.delimobil.cabbit.config.declaration.BindDeclaration
 import ru.delimobil.cabbit.config.declaration.ExchangeDeclaration
 import ru.delimobil.cabbit.config.declaration.QueueDeclaration
@@ -46,4 +48,10 @@ final class RabbitClientChannelDeclaration[F[_]: Functor](
         bindDeclaration.routingKey.name
       )
     }.void
+
+  def queueDelete(queueName: QueueName): F[client.AMQP.Queue.DeleteOk] =
+    channel.delay(_.queueDelete(queueName.name))
+
+  def exchangeDelete(exchangeName: ExchangeName): F[Unit] =
+    channel.delay(_.exchangeDelete(exchangeName.name)).void
 }
