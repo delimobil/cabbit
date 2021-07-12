@@ -49,6 +49,9 @@ final class RabbitClientChannelDeclaration[F[_]: Functor](
       )
     }.void
 
+  def queueUnbind(bind: BindDeclaration): F[Unit] =
+    channel.delay(_.queueUnbind(bind.queueName.name, bind.exchangeName.name, bind.routingKey.name))
+
   def queueDelete(queueName: QueueName): F[client.AMQP.Queue.DeleteOk] =
     channel.delay(_.queueDelete(queueName.name))
 

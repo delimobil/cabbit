@@ -13,6 +13,8 @@ trait ChannelDeclaration[F[_]] {
 
   def queueBind(queueBind: BindDeclaration): F[Unit]
 
+  def queueUnbind(bind: BindDeclaration): F[Unit]
+
   def queueDelete(queueName: QueueName): F[client.AMQP.Queue.DeleteOk]
 
   def exchangeDelete(exchangeName: ExchangeName): F[Unit]
