@@ -3,6 +3,8 @@ package ru.delimobil.cabbit
 import java.util.UUID
 
 import cats.effect.ContextShift
+import cats.effect.Effect
+import cats.effect.syntax.effect._
 import cats.effect.IO
 import cats.effect.Resource
 import cats.effect.Sync
@@ -64,95 +66,85 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("queue declaration returns state") {
-    rabbitUtils.declareRandom
-      .use {
-        case (queue, _) =>
-          for {
-            declareResult <- rabbitUtils.declare(queue)
-            _ = assert(declareResult.getQueue == queue.queueName.name)
-            _ = assert(declareResult.getConsumerCount == 0)
-            _ = assert(declareResult.getMessageCount == 0)
-          } yield {}
+    rabbitUtils.useRandomlyDeclared {
+      case (queue, _) =>
+        for {
+          declareResult <- rabbitUtils.declare(queue)
+          _ = assert(declareResult.getQueue == queue.queueName.name)
+          _ = assert(declareResult.getConsumerCount == 0)
+          _ = assert(declareResult.getMessageCount == 0)
+        } yield {}
       }
-      .unsafeRunSync()
   }
 
   test("publisher publishes") {
-    rabbitUtils.declareRandom
-      .use {
-        case (queue, bind) =>
-          for {
-            _ <- rabbitUtils.publish(List("hello from fs2-rabbit"), bind)
-            _ <- sleep
-            declareResult <- rabbitUtils.declare(queue)
-            _ = assert(declareResult.getMessageCount == 1)
-          } yield {}
+    rabbitUtils.useRandomlyDeclared {
+      case (queue, bind) =>
+        for {
+          _ <- rabbitUtils.publish(List("hello from fs2-rabbit"), bind)
+          _ <- sleep
+          declareResult <- rabbitUtils.declare(queue)
+          _ = assert(declareResult.getMessageCount == 1)
+        } yield {}
       }
-      .unsafeRunSync()
   }
 
   test("consumer `basicGet` `autoAck = true`") {
     val message = "hello from fs2-rabbit"
 
-    rabbitUtils.declareRandom
-      .use {
-        case (queue, bind) =>
-          for {
-            _ <- rabbitUtils.publish(List(message), bind)
-            _ <- sleep
-            response <- rabbitUtils.basicGet(bind.queueName, autoAck = true)
-            declareOk <- rabbitUtils.declare(queue)
-            bodyResponse = ungzip(response.getBody).map(decodeUtf8).flatMap(parse)
-            _ = assert(bodyResponse === Right(Json.fromString(message)))
-            _ = assert(declareOk.getConsumerCount === 0)
-            _ = assert(declareOk.getMessageCount === 0)
-          } yield {}
+    rabbitUtils.useRandomlyDeclared {
+      case (queue, bind) =>
+        for {
+          _ <- rabbitUtils.publish(List(message), bind)
+          _ <- sleep
+          response <- rabbitUtils.basicGet(bind.queueName, autoAck = true)
+          declareOk <- rabbitUtils.declare(queue)
+          bodyResponse = ungzip(response.getBody).map(decodeUtf8).flatMap(parse)
+          _ = assert(bodyResponse === Right(Json.fromString(message)))
+          _ = assert(declareOk.getConsumerCount === 0)
+          _ = assert(declareOk.getMessageCount === 0)
+        } yield {}
       }
-      .unsafeRunSync()
   }
 
   test("consumer rejects `basicGet`, `requeue = true`") {
     val message = "hello from fs2-rabbit"
 
-    rabbitUtils.declareRandom
-      .use {
-        case (queue, bind) =>
-          for {
-            _ <- rabbitUtils.publish(List(message), bind)
-            _ <- sleep
-            response <- rabbitUtils.basicGet(bind.queueName, autoAck = false)
-            _ <- rabbitUtils.basicReject(DeliveryTag(response.getEnvelope.getDeliveryTag), requeue = true)
-            _ <- sleep
-            declareOk <- rabbitUtils.declare(queue)
-            bodyResponse = ungzip(response.getBody).map(decodeUtf8).flatMap(parse)
-            _ = assert(bodyResponse === Right(Json.fromString(message)))
-            _ = assert(declareOk.getConsumerCount === 0)
-            _ = assert(declareOk.getMessageCount === 1)
-          } yield {}
+    rabbitUtils.useRandomlyDeclared {
+      case (queue, bind) =>
+        for {
+          _ <- rabbitUtils.publish(List(message), bind)
+          _ <- sleep
+          response <- rabbitUtils.basicGet(bind.queueName, autoAck = false)
+          _ <- rabbitUtils.basicReject(DeliveryTag(response.getEnvelope.getDeliveryTag), requeue = true)
+          _ <- sleep
+          declareOk <- rabbitUtils.declare(queue)
+          bodyResponse = ungzip(response.getBody).map(decodeUtf8).flatMap(parse)
+          _ = assert(bodyResponse === Right(Json.fromString(message)))
+          _ = assert(declareOk.getConsumerCount === 0)
+          _ = assert(declareOk.getMessageCount === 1)
+        } yield {}
       }
-      .unsafeRunSync()
   }
 
   test("consumer rejects `basicGet` `requeue = false`") {
     val message = "hello from fs2-rabbit"
 
-    rabbitUtils.declareRandom
-      .use {
-        case (queue, bind) =>
-          for {
-            _ <- rabbitUtils.publish(List(message), bind)
-            _ <- sleep
-            response <- rabbitUtils.basicGet(bind.queueName, autoAck = false)
-            _ <- rabbitUtils.basicReject(DeliveryTag(response.getEnvelope.getDeliveryTag), requeue = false)
-            _ <- sleep
-            declareOk <- rabbitUtils.declare(queue)
-            bodyResponse = ungzip(response.getBody).map(decodeUtf8).flatMap(parse)
-            _ = assert(bodyResponse === Right(Json.fromString(message)))
-            _ = assert(declareOk.getConsumerCount === 0)
-            _ = assert(declareOk.getMessageCount === 0)
-          } yield {}
+    rabbitUtils.useRandomlyDeclared {
+      case (queue, bind) =>
+        for {
+          _ <- rabbitUtils.publish(List(message), bind)
+          _ <- sleep
+          response <- rabbitUtils.basicGet(bind.queueName, autoAck = false)
+          _ <- rabbitUtils.basicReject(DeliveryTag(response.getEnvelope.getDeliveryTag), requeue = false)
+          _ <- sleep
+          declareOk <- rabbitUtils.declare(queue)
+          bodyResponse = ungzip(response.getBody).map(decodeUtf8).flatMap(parse)
+          _ = assert(bodyResponse === Right(Json.fromString(message)))
+          _ = assert(declareOk.getConsumerCount === 0)
+          _ = assert(declareOk.getMessageCount === 0)
+        } yield {}
       }
-      .unsafeRunSync()
   }
 
   test("consumer consumes") {
@@ -160,42 +152,38 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     val prefetched = 51
     val messages = List.fill(maxMessages)(Random.nextString(Random.nextInt(100)))
 
-    rabbitUtils.declareRandom
-      .use {
-        case (queue, bind) =>
-          for {
-            _ <- rabbitUtils.publish(messages, bind)
-            (_, stream) <- rabbitUtils.deliveryStream(bind.queueName, prefetched)
-            _ <- sleep
-            declareOk <- rabbitUtils.declare(queue)
-            deliveries <- rabbitUtils.readAckN(stream, maxMessages)
-            bodies = deliveries.map(msg => ungzip(msg.getBody).map(decodeUtf8).flatMap(parse))
-            _ = assert(declareOk.getConsumerCount == 1)
-            _ = assert(declareOk.getMessageCount == (maxMessages - prefetched))
-            _ = assert(messages.map(v => Right(Json.fromString(v))) === bodies)
-          } yield {}
+    rabbitUtils.useRandomlyDeclared {
+      case (queue, bind) =>
+        for {
+          _ <- rabbitUtils.publish(messages, bind)
+          (_, stream) <- rabbitUtils.deliveryStream(bind.queueName, prefetched)
+          _ <- sleep
+          declareOk <- rabbitUtils.declare(queue)
+          deliveries <- rabbitUtils.readAckN(stream, maxMessages)
+          bodies = deliveries.map(msg => ungzip(msg.getBody).map(decodeUtf8).flatMap(parse))
+          _ = assert(declareOk.getConsumerCount == 1)
+          _ = assert(declareOk.getMessageCount == (maxMessages - prefetched))
+          _ = assert(messages.map(v => Right(Json.fromString(v))) === bodies)
+        } yield {}
       }
-      .unsafeRunSync()
   }
 
   ignore("consumer completes on cancel, msg gets requeued") {
     val messages = (1 to 2).map(i => s"hello from fs2-rabbit-$i").toList
 
-    rabbitUtils.declareRandom
-      .use {
-        case (queue, bind) =>
-          for {
-            _ <- rabbitUtils.publish(messages, bind)
-            (tag, stream) <- rabbitUtils.deliveryStream(bind.queueName, 1)
-            _ <- rabbitUtils.cancel(tag)
-            _ <- sleep
-            deliveriesEither <- IO.race(stream.compile.toList, IO.sleep(300.millis))
-            declareOk2 <- rabbitUtils.declare(queue)
-            _ = assert(deliveriesEither.isLeft)
-            _ = assert(declareOk2.getMessageCount == 2)
-          } yield {}
+    rabbitUtils.useRandomlyDeclared {
+      case (queue, bind) =>
+        for {
+          _ <- rabbitUtils.publish(messages, bind)
+          (tag, stream) <- rabbitUtils.deliveryStream(bind.queueName, 1)
+          _ <- rabbitUtils.cancel(tag)
+          _ <- sleep
+          deliveriesEither <- IO.race(stream.compile.toList, IO.sleep(300.millis))
+          declareOk2 <- rabbitUtils.declare(queue)
+          _ = assert(deliveriesEither.isLeft)
+          _ = assert(declareOk2.getMessageCount == 2)
+        } yield {}
       }
-      .unsafeRunSync()
   }
 
   test("Stream completes on queue removal") {
@@ -216,7 +204,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
 private object CabbitSuite {
 
-  final class RabbitUtils[F[_]: Sync](
+  final class RabbitUtils[F[_]: Effect](
     declaration: ChannelDeclaration[F],
     consumer: ChannelConsumer[F],
     publisher: ChannelPublisher[F]
@@ -246,7 +234,7 @@ private object CabbitSuite {
         .compile
         .toList
 
-    def publish(messages: List[String], bind: BindDeclaration) =
+    def publish(messages: List[String], bind: BindDeclaration): F[List[Unit]] =
       messages.traverse(publishOne(bind.exchangeName, bind.routingKey, _))
 
     private def publishOne(exchange: ExchangeName, key: RoutingKey, msg: String) =
@@ -268,8 +256,11 @@ private object CabbitSuite {
       bindingIO <* exchangeIO <* queueIO
     }
 
-    def declareRandom: Resource[F, (QueueDeclaration, BindDeclaration)] =
+    def useRandomlyDeclared(testFunc: (QueueDeclaration, BindDeclaration) => F[Unit]): Unit =
       Resource.make(declareAcquire) { case (_, bind) => declareRelease(bind) }
+        .use { case (queue, bind) => testFunc(queue, bind) }
+        .toIO
+        .unsafeRunSync()
 
     private def getDeclarations(uuid: UUID): (ExchangeDeclaration, QueueDeclaration, BindDeclaration) = {
       val exchange =
