@@ -4,7 +4,7 @@ ThisBuild / organization := "ru.delimobil"
 lazy val root = (project in file("."))
   .settings(
     name := "cabbit",
-    version := "0.0.5-SNAPSHOT",
+    version := "0.0.7-SNAPSHOT",
     addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
     libraryDependencies ++= Seq(
       "co.fs2" %% "fs2-core" % "2.5.6",
