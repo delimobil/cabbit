@@ -288,7 +288,7 @@ private object CabbitSuite {
     }
   }
 
-  def make[F[_]: Sync](conn: Connection[F]): Resource[F, RabbitUtils[F]] =
+  def make[F[_]: Effect](conn: Connection[F]): Resource[F, RabbitUtils[F]] =
     for {
       declaration <- conn.createChannelDeclaration
       consumer <- conn.createChannelConsumer
