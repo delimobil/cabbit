@@ -7,7 +7,6 @@ import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
 import cats.effect.Resource
 import cats.effect.Sync
-import cats.syntax.applicativeError._
 import com.rabbitmq.client
 import ru.delimobil.cabbit.algebra.ChannelConsumer
 import ru.delimobil.cabbit.algebra.ChannelDeclaration

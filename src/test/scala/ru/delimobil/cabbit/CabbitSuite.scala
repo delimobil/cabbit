@@ -3,6 +3,7 @@ package ru.delimobil.cabbit
 import java.util.UUID
 
 import cats.Parallel
+import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
 import cats.effect.Effect
 import cats.effect.IO
@@ -10,6 +11,7 @@ import cats.effect.Resource
 import cats.effect.Sync
 import cats.effect.Timer
 import cats.effect.syntax.effect._
+import cats.effect.syntax.concurrent._
 import cats.syntax.applicativeError._
 import cats.syntax.apply._
 import cats.syntax.flatMap._
@@ -67,6 +69,26 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   override protected def afterAll(): Unit = {
     super.afterAll()
     closeIO.unsafeRunSync()
+  }
+
+  test("connection is closed") {
+    val actual = checkShutdownNotifier[IO, Connection[IO]](container)(Resource.pure[IO, Connection[IO]](_))
+    assertResult((true, false))(actual)
+  }
+
+  ignore("channel declaration is closed") {
+    val actual = checkShutdownNotifier[IO, ChannelDeclaration[IO]](container)(_.createChannelDeclaration)
+    assertResult((true, false))(actual)
+  }
+
+  ignore("channel publisher is closed") {
+    val actual = checkShutdownNotifier[IO, ChannelPublisher[IO]](container)(_.createChannelPublisher)
+    assertResult((true, false))(actual)
+  }
+
+  ignore("channel consumer is closed") {
+    val actual = checkShutdownNotifier[IO, ChannelConsumer[IO]](container)(_.createChannelConsumer)
+    assertResult((true, false))(actual)
   }
 
   test("queue declaration returns state") {
@@ -343,4 +365,22 @@ private object CabbitSuite {
       consumer <- conn.createChannelConsumer
       publisher <- conn.createChannelPublisher
     } yield new RabbitUtils(declaration, consumer, publisher)
+
+  def checkShutdownNotifier[F[_]: ConcurrentEffect: ContextShift: Timer, T <: ShutdownNotifier[F]](
+    container: RabbitContainer
+  )(
+    f: Connection[F] => Resource[F, T]
+  ): (Boolean, Boolean) = {
+    val ((_, openDuringUse), openAfterUse) =
+      RabbitContainer
+        .makeConnection[F](container)
+        .flatMap(f)
+        .use(notifier => notifier.isOpen.tupleLeft(notifier))
+        .mproduct(_._1.isOpen)
+        .timeout(100.millis)
+        .toIO
+        .unsafeRunSync()
+
+    (openDuringUse, openAfterUse)
+  }
 }
