@@ -20,7 +20,7 @@ import ru.delimobil.cabbit.algebra.DeliveryTag
 import ru.delimobil.cabbit.algebra.QueueName
 
 final class RabbitClientChannelConsumer[F[_]: ConcurrentEffect](
-  channelOnPool: ChannelOnPool[F]
+  channelOnPool: ChannelOnPool[F],
 ) extends ChannelConsumer[F] {
 
   def basicQos(prefetchCount: Int): F[Unit] =
@@ -29,19 +29,23 @@ final class RabbitClientChannelConsumer[F[_]: ConcurrentEffect](
   def basicConsume(
     queue: QueueName,
     deliverCallback: client.DeliverCallback,
-    cancelCallback: client.CancelCallback
+    cancelCallback: client.CancelCallback,
   ): F[ConsumerTag] =
-    channelOnPool.delay(_.basicConsume(queue.name, deliverCallback, cancelCallback)).map(ConsumerTag)
+    channelOnPool
+      .delay(_.basicConsume(queue.name, deliverCallback, cancelCallback))
+      .map(ConsumerTag(_))
 
   def basicConsume(queue: QueueName, consumer: client.Consumer): F[ConsumerTag] =
-    channelOnPool.delay(_.basicConsume(queue.name, consumer)).map(ConsumerTag)
+    channelOnPool
+      .delay(_.basicConsume(queue.name, consumer))
+      .map(ConsumerTag(_))
 
   def basicGet(queue: QueueName, autoAck: Boolean): F[client.GetResponse] =
     channelOnPool.delay(_.basicGet(queue.name, autoAck))
 
   def deliveryStream(
     queueName: QueueName,
-    prefetchCount: Int
+    prefetchCount: Int,
   ): F[(ConsumerTag, Stream[F, client.Delivery])] =
     for {
       _ <- basicQos(prefetchCount)
@@ -63,7 +67,7 @@ final class RabbitClientChannelConsumer[F[_]: ConcurrentEffect](
     channelOnPool.delay(_.basicCancel(consumerTag.name))
 
   private def getCallbacks(
-    queue: NoneTerminatedQueue[F, client.Delivery]
+    queue: NoneTerminatedQueue[F, client.Delivery],
   ): (client.CancelCallback, client.DeliverCallback) = {
     val cancelCallback: client.CancelCallback = _ => queue.enqueue1(none).toIO.unsafeRunSync()
     val deliverCallback: client.DeliverCallback = (_, delivery) => queue.enqueue1(delivery.some).toIO.unsafeRunSync()
@@ -92,7 +96,7 @@ final class RabbitClientChannelConsumer[F[_]: ConcurrentEffect](
         consumerTag: String,
         envelope: Envelope,
         properties: AMQP.BasicProperties,
-        body: Array[Byte]
+        body: Array[Byte],
       ): Unit = deliver.handle(consumerTag, new client.Delivery(envelope, properties, body))
     }
   }

@@ -1,7 +1,6 @@
 package ru.delimobil.cabbit
 
 import java.util.UUID
-
 import cats.effect.ContextShift
 import cats.effect.Effect
 import cats.effect.syntax.effect._
@@ -14,6 +13,7 @@ import cats.syntax.flatMap._
 import cats.syntax.functor._
 import cats.syntax.traverse._
 import com.rabbitmq.client.AMQP
+import com.rabbitmq.client.AMQP.Queue
 import com.rabbitmq.client.BuiltinExchangeType
 import com.rabbitmq.client.Delivery
 import com.rabbitmq.client.GetResponse
@@ -50,14 +50,14 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
       .flatMap(RabbitContainer.connection[IO])
       .flatMap(make[IO])
       .allocated
-      .flatTap {
-        case (utils, closeAction) =>
-          IO.delay {
-            rabbitUtils = utils
-            closeIO = closeAction
-          }
+      .flatTap { case (utils, closeAction) =>
+        IO.delay {
+          rabbitUtils = utils
+          closeIO = closeAction
+        }
       }
-      .unsafeRunSync
+      .void
+      .unsafeRunSync()
   }
 
   override protected def afterAll(): Unit = {
@@ -66,85 +66,80 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("queue declaration returns state") {
-    rabbitUtils.useRandomlyDeclared {
-      case (queue, _) =>
-        for {
-          declareResult <- rabbitUtils.declare(queue)
-          _ = assert(declareResult.getQueue == queue.queueName.name)
-          _ = assert(declareResult.getConsumerCount == 0)
-          _ = assert(declareResult.getMessageCount == 0)
-        } yield {}
-      }
+    rabbitUtils.useRandomlyDeclared { case (queue, _) =>
+      for {
+        declareResult <- rabbitUtils.declare(queue)
+        _ = assert(declareResult.getQueue == queue.queueName.name)
+        _ = assert(declareResult.getConsumerCount == 0)
+        _ = assert(declareResult.getMessageCount == 0)
+      } yield {}
+    }
   }
 
   test("publisher publishes") {
-    rabbitUtils.useRandomlyDeclared {
-      case (queue, bind) =>
-        for {
-          _ <- rabbitUtils.publish(List("hello from fs2-rabbit"), bind)
-          _ <- sleep
-          declareResult <- rabbitUtils.declare(queue)
-          _ = assert(declareResult.getMessageCount == 1)
-        } yield {}
-      }
+    rabbitUtils.useRandomlyDeclared { case (queue, bind) =>
+      for {
+        _ <- rabbitUtils.publish(List("hello from fs2-rabbit"), bind)
+        _ <- sleep
+        declareResult <- rabbitUtils.declare(queue)
+        _ = assert(declareResult.getMessageCount == 1)
+      } yield {}
+    }
   }
 
   test("consumer `basicGet` `autoAck = true`") {
     val message = "hello from fs2-rabbit"
 
-    rabbitUtils.useRandomlyDeclared {
-      case (queue, bind) =>
-        for {
-          _ <- rabbitUtils.publish(List(message), bind)
-          _ <- sleep
-          response <- rabbitUtils.basicGet(bind.queueName, autoAck = true)
-          declareOk <- rabbitUtils.declare(queue)
-          bodyResponse = ungzip(response.getBody).map(decodeUtf8).flatMap(parse)
-          _ = assert(bodyResponse === Right(Json.fromString(message)))
-          _ = assert(declareOk.getConsumerCount === 0)
-          _ = assert(declareOk.getMessageCount === 0)
-        } yield {}
-      }
+    rabbitUtils.useRandomlyDeclared { case (queue, bind) =>
+      for {
+        _ <- rabbitUtils.publish(List(message), bind)
+        _ <- sleep
+        response <- rabbitUtils.basicGet(bind.queueName, autoAck = true)
+        declareOk <- rabbitUtils.declare(queue)
+        bodyResponse = ungzip(response.getBody).map(decodeUtf8).flatMap(parse)
+        _ = assert(bodyResponse === Right(Json.fromString(message)))
+        _ = assert(declareOk.getConsumerCount === 0)
+        _ = assert(declareOk.getMessageCount === 0)
+      } yield {}
+    }
   }
 
   test("consumer rejects `basicGet`, `requeue = true`") {
     val message = "hello from fs2-rabbit"
 
-    rabbitUtils.useRandomlyDeclared {
-      case (queue, bind) =>
-        for {
-          _ <- rabbitUtils.publish(List(message), bind)
-          _ <- sleep
-          response <- rabbitUtils.basicGet(bind.queueName, autoAck = false)
-          _ <- rabbitUtils.basicReject(DeliveryTag(response.getEnvelope.getDeliveryTag), requeue = true)
-          _ <- sleep
-          declareOk <- rabbitUtils.declare(queue)
-          bodyResponse = ungzip(response.getBody).map(decodeUtf8).flatMap(parse)
-          _ = assert(bodyResponse === Right(Json.fromString(message)))
-          _ = assert(declareOk.getConsumerCount === 0)
-          _ = assert(declareOk.getMessageCount === 1)
-        } yield {}
-      }
+    rabbitUtils.useRandomlyDeclared { case (queue, bind) =>
+      for {
+        _ <- rabbitUtils.publish(List(message), bind)
+        _ <- sleep
+        response <- rabbitUtils.basicGet(bind.queueName, autoAck = false)
+        _ <- rabbitUtils.basicReject(DeliveryTag(response.getEnvelope.getDeliveryTag), requeue = true)
+        _ <- sleep
+        declareOk <- rabbitUtils.declare(queue)
+        bodyResponse = ungzip(response.getBody).map(decodeUtf8).flatMap(parse)
+        _ = assert(bodyResponse === Right(Json.fromString(message)))
+        _ = assert(declareOk.getConsumerCount === 0)
+        _ = assert(declareOk.getMessageCount === 1)
+      } yield {}
+    }
   }
 
   test("consumer rejects `basicGet` `requeue = false`") {
     val message = "hello from fs2-rabbit"
 
-    rabbitUtils.useRandomlyDeclared {
-      case (queue, bind) =>
-        for {
-          _ <- rabbitUtils.publish(List(message), bind)
-          _ <- sleep
-          response <- rabbitUtils.basicGet(bind.queueName, autoAck = false)
-          _ <- rabbitUtils.basicReject(DeliveryTag(response.getEnvelope.getDeliveryTag), requeue = false)
-          _ <- sleep
-          declareOk <- rabbitUtils.declare(queue)
-          bodyResponse = ungzip(response.getBody).map(decodeUtf8).flatMap(parse)
-          _ = assert(bodyResponse === Right(Json.fromString(message)))
-          _ = assert(declareOk.getConsumerCount === 0)
-          _ = assert(declareOk.getMessageCount === 0)
-        } yield {}
-      }
+    rabbitUtils.useRandomlyDeclared { case (queue, bind) =>
+      for {
+        _ <- rabbitUtils.publish(List(message), bind)
+        _ <- sleep
+        response <- rabbitUtils.basicGet(bind.queueName, autoAck = false)
+        _ <- rabbitUtils.basicReject(DeliveryTag(response.getEnvelope.getDeliveryTag), requeue = false)
+        _ <- sleep
+        declareOk <- rabbitUtils.declare(queue)
+        bodyResponse = ungzip(response.getBody).map(decodeUtf8).flatMap(parse)
+        _ = assert(bodyResponse === Right(Json.fromString(message)))
+        _ = assert(declareOk.getConsumerCount === 0)
+        _ = assert(declareOk.getMessageCount === 0)
+      } yield {}
+    }
   }
 
   test("consumer consumes") {
@@ -152,51 +147,51 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     val prefetched = 51
     val messages = List.fill(maxMessages)(Random.nextString(Random.nextInt(100)))
 
-    rabbitUtils.useRandomlyDeclared {
-      case (queue, bind) =>
-        for {
-          _ <- rabbitUtils.publish(messages, bind)
-          (_, stream) <- rabbitUtils.deliveryStream(bind.queueName, prefetched)
-          _ <- sleep
-          declareOk <- rabbitUtils.declare(queue)
-          deliveries <- rabbitUtils.readAckN(stream, maxMessages)
-          bodies = deliveries.map(msg => ungzip(msg.getBody).map(decodeUtf8).flatMap(parse))
-          _ = assert(declareOk.getConsumerCount == 1)
-          _ = assert(declareOk.getMessageCount == (maxMessages - prefetched))
-          _ = assert(messages.map(v => Right(Json.fromString(v))) === bodies)
-        } yield {}
-      }
+    rabbitUtils.useRandomlyDeclared { case (queue, bind) =>
+      for {
+        _ <- rabbitUtils.publish(messages, bind)
+        temp <- rabbitUtils.deliveryStream(bind.queueName, prefetched)
+        (_, stream) = temp
+        _ <- sleep
+        declareOk <- rabbitUtils.declare(queue)
+        deliveries <- rabbitUtils.readAckN(stream, maxMessages.toLong)
+        bodies = deliveries.map(msg => ungzip(msg.getBody).map(decodeUtf8).flatMap(parse))
+        _ = assert(declareOk.getConsumerCount == 1)
+        _ = assert(declareOk.getMessageCount == (maxMessages - prefetched))
+        _ = assert(messages.map(v => Right(Json.fromString(v))) === bodies)
+      } yield {}
+    }
   }
 
   ignore("consumer completes on cancel, msg gets requeued") {
     val messages = (1 to 2).map(i => s"hello from fs2-rabbit-$i").toList
 
-    rabbitUtils.useRandomlyDeclared {
-      case (queue, bind) =>
-        for {
-          _ <- rabbitUtils.publish(messages, bind)
-          (tag, stream) <- rabbitUtils.deliveryStream(bind.queueName, 1)
-          _ <- rabbitUtils.cancel(tag)
-          _ <- sleep
-          deliveriesEither <- IO.race(stream.compile.toList, IO.sleep(300.millis))
-          declareOk2 <- rabbitUtils.declare(queue)
-          _ = assert(deliveriesEither.isLeft)
-          _ = assert(declareOk2.getMessageCount == 2)
-        } yield {}
-      }
+    rabbitUtils.useRandomlyDeclared { case (queue, bind) =>
+      for {
+        _ <- rabbitUtils.publish(messages, bind)
+        temp <- rabbitUtils.deliveryStream(bind.queueName, 1)
+        (tag, stream) = temp
+        _ <- rabbitUtils.cancel(tag)
+        _ <- sleep
+        deliveriesEither <- IO.race(stream.compile.toList, IO.sleep(300.millis))
+        declareOk2 <- rabbitUtils.declare(queue)
+        _ = assert(deliveriesEither.isLeft)
+        _ = assert(declareOk2.getMessageCount == 2)
+      } yield {}
+    }
   }
 
   test("Stream completes on queue removal") {
     rabbitUtils.declareAcquire
-      .flatMap {
-        case (_, bind) =>
-          for {
-            (_, stream) <- rabbitUtils.deliveryStream(bind.queueName, 1)
-            _ <- rabbitUtils.declareRelease(bind)
-            _ <- sleep
-            deliveriesEither <- IO.race(stream.compile.toList, IO.sleep(300.millis))
-            _ = assert(deliveriesEither.isLeft)
-          } yield {}
+      .flatMap { case (_, bind) =>
+        for {
+          temp <- rabbitUtils.deliveryStream(bind.queueName, 1)
+          (_, stream) = temp
+          _ <- rabbitUtils.declareRelease(bind)
+          _ <- sleep
+          deliveriesEither <- IO.race(stream.compile.toList, IO.sleep(300.millis))
+          _ = assert(deliveriesEither.isLeft)
+        } yield {}
       }
       .unsafeRunSync()
   }
@@ -207,7 +202,7 @@ private object CabbitSuite {
   final class RabbitUtils[F[_]: Effect](
     declaration: ChannelDeclaration[F],
     consumer: ChannelConsumer[F],
-    publisher: ChannelPublisher[F]
+    publisher: ChannelPublisher[F],
   ) {
 
     import ru.delimobil.cabbit.algebra.BodyEncoder.instances.jsonGzip
@@ -227,7 +222,7 @@ private object CabbitSuite {
     def deliveryStream(queue: QueueName, prefetch: Int): F[(ConsumerTag, Stream[F, Delivery])] =
       consumer.deliveryStream(queue, prefetch)
 
-    def readAckN(stream: Stream[F, Delivery], n: Int): F[List[Delivery]] =
+    def readAckN(stream: Stream[F, Delivery], n: Long): F[List[Delivery]] =
       stream
         .evalTap(d => consumer.basicAck(DeliveryTag(d.getEnvelope.getDeliveryTag), multiple = false))
         .take(n)
@@ -249,7 +244,7 @@ private object CabbitSuite {
         _ <- declaration.queueBind(bind)
       } yield (queue, bind)
 
-    def declareRelease(bind: BindDeclaration): F[Unit] = {
+    def declareRelease(bind: BindDeclaration): F[Queue.UnbindOk] = {
       val bindingIO = declaration.queueUnbind(bind)
       val exchangeIO = declaration.exchangeDelete(bind.exchangeName)
       val queueIO = declaration.queueDelete(bind.queueName)
@@ -257,7 +252,8 @@ private object CabbitSuite {
     }
 
     def useRandomlyDeclared(testFunc: (QueueDeclaration, BindDeclaration) => F[Unit]): Unit =
-      Resource.make(declareAcquire) { case (_, bind) => declareRelease(bind) }
+      Resource
+        .make(declareAcquire) { case (_, bind) => declareRelease(bind).void }
         .use { case (queue, bind) => testFunc(queue, bind) }
         .toIO
         .unsafeRunSync()
@@ -270,7 +266,7 @@ private object CabbitSuite {
           DurableConfig.NonDurable,
           AutoDeleteConfig.NonAutoDelete,
           InternalConfig.NonInternal,
-          Map.empty
+          Map.empty,
         )
 
       val queue =
@@ -279,7 +275,7 @@ private object CabbitSuite {
           DurableConfig.NonDurable,
           ExclusiveConfig.NonExclusive,
           AutoDeleteConfig.NonAutoDelete,
-          Map.empty
+          Map.empty,
         )
 
       val binding = BindDeclaration(queue.queueName, exchange.exchangeName, RoutingKey("the-key"))
