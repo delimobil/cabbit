@@ -239,11 +239,11 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("only one of two exclusive queues on different connections should work") {
-    val connRes = RabbitContainer.makeConnection[IO](container)
+    val connRes = RabbitContainer.makeConnection[IO](container).mproduct(_.createChannelDeclaration)
+
     (connRes, connRes)
       .tupled
-      .mproduct { case (conn1, conn2) => (conn1.createChannelDeclaration, conn2.createChannelDeclaration).tupled }
-      .use { case ((conn1, conn2), (channel1, channel2)) =>
+      .use { case ((conn1, channel1), (conn2, channel2)) =>
         rabbitUtils.declareExclusive(channel1, channel2)
           .product((channel1.isOpen, channel2.isOpen, conn1.isOpen, conn2.isOpen).tupled)
           .map { case ((result1, result2), (ch1Open, ch2Open, conn1Open, conn2Open)) =>

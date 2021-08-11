@@ -59,5 +59,5 @@ final class RabbitClientChannelDeclaration[F[_]: Functor](
     channel.delay(_.exchangeDelete(exchangeName.name)).void
 
   def isOpen: F[Boolean] =
-    channel.delay(_.isOpen)
+    channel.isOpen
 }

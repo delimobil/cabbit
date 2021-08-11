@@ -37,5 +37,5 @@ final class RabbitClientChannelPublisher[F[_]](
   }
 
   def isOpen: F[Boolean] =
-    channelOnPool.delay(_.isOpen)
+    channelOnPool.isOpen
 }

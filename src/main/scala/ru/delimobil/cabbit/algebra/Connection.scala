@@ -9,4 +9,6 @@ trait Connection[F[_]] extends ShutdownNotifier[F] {
   def createChannelPublisher: Resource[F, ChannelPublisher[F]]
 
   def createChannelConsumer: Resource[F, ChannelConsumer[F]]
+
+  def createChannel: Resource[F, Channel[F]]
 }

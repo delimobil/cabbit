@@ -63,7 +63,7 @@ final class RabbitClientChannelConsumer[F[_]: ConcurrentEffect](
     channelOnPool.delay(_.basicCancel(consumerTag.name))
 
   def isOpen: F[Boolean] =
-    channelOnPool.delay(_.isOpen)
+    channelOnPool.isOpen
 
   private def getCallbacks(
     queue: NoneTerminatedQueue[F, client.Delivery]
