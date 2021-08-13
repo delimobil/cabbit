@@ -17,4 +17,7 @@ final class RabbitClientChannelOnPool[F[_]: Sync: ContextShift] private[client] 
 
   def blockOn[V](f: client.Channel => F[V]): F[V] =
     blocker.blockOn(f(channel))
+
+  def isOpen: F[Boolean] =
+    blocker.delay(channel.isOpen)
 }
