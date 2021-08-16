@@ -62,7 +62,8 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
           closeIO = closeAction
         }
       }
-      .unsafeRunSync
+      .void
+      .unsafeRunSync()
   }
 
   override protected def afterAll(): Unit = {

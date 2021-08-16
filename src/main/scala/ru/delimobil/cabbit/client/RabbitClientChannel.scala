@@ -2,6 +2,7 @@ package ru.delimobil.cabbit.client
 
 import cats.effect.ConcurrentEffect
 import com.rabbitmq.client.AMQP
+import com.rabbitmq.client.AMQP.Exchange
 import com.rabbitmq.client.AMQP.Queue
 import com.rabbitmq.client.CancelCallback
 import com.rabbitmq.client.Consumer
@@ -37,13 +38,13 @@ final class RabbitClientChannel[F[_]: ConcurrentEffect](channelOnPool: ChannelOn
   def queueDeclare(queueDeclaration: declaration.QueueDeclaration): F[Queue.DeclareOk] =
     declarator.queueDeclare(queueDeclaration)
 
-  def exchangeDeclare(exchangeDeclaration: declaration.ExchangeDeclaration): F[Unit] =
+  def exchangeDeclare(exchangeDeclaration: declaration.ExchangeDeclaration): F[Exchange.DeclareOk] =
     declarator.exchangeDeclare(exchangeDeclaration)
 
   def queueBind(queueBind: declaration.BindDeclaration): F[Unit] =
     declarator.queueBind(queueBind)
 
-  def queueUnbind(bind: declaration.BindDeclaration): F[Unit] =
+  def queueUnbind(bind: declaration.BindDeclaration): F[Queue.UnbindOk] =
     declarator.queueUnbind(bind)
 
   def queueDelete(queueName: algebra.QueueName): F[Queue.DeleteOk] =
@@ -56,7 +57,7 @@ final class RabbitClientChannel[F[_]: ConcurrentEffect](channelOnPool: ChannelOn
     exchangeName: algebra.ExchangeName,
     routingKey: algebra.RoutingKey,
     properties: AMQP.BasicProperties,
-    body: V
+    body: V,
   )(implicit encoder: BodyEncoder[V]): F[Unit] =
     publisher.basicPublish(exchangeName, routingKey, properties, body)
 
@@ -65,7 +66,7 @@ final class RabbitClientChannel[F[_]: ConcurrentEffect](channelOnPool: ChannelOn
     routingKey: algebra.RoutingKey,
     properties: AMQP.BasicProperties,
     mandatory: Boolean,
-    body: V
+    body: V,
   )(implicit encoder: BodyEncoder[V]): F[Unit] =
     publisher.basicPublish(exchangeName, routingKey, properties, mandatory, body)
 
@@ -75,7 +76,7 @@ final class RabbitClientChannel[F[_]: ConcurrentEffect](channelOnPool: ChannelOn
   def basicConsume(
     queue: algebra.QueueName,
     deliverCallback: DeliverCallback,
-    cancelCallback: CancelCallback
+    cancelCallback: CancelCallback,
   ): F[algebra.ConsumerTag] =
     consumer.basicConsume(queue, deliverCallback, cancelCallback)
 
