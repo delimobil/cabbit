@@ -2,10 +2,12 @@ ThisBuild / scalaVersion := "2.13.6"
 ThisBuild / organization := "ru.delimobil"
 ThisBuild / crossScalaVersions ++= Seq("2.13.6", "3.0.1")
 
-lazy val root = (project in file("."))
+val fs2Version = "2.5.6"
+
+val root = (project in file("."))
   .settings(
     name := "cabbit",
-    version := "0.0.8-SNAPSHOT",
+    version := "0.0.10-SNAPSHOT",
     scalacOptions ++= {
       (CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
@@ -27,8 +29,9 @@ lazy val root = (project in file("."))
       }
     },
     libraryDependencies ++= Seq(
-      "co.fs2" %% "fs2-core" % "2.5.9",
-      "org.typelevel" %% "cats-effect" % "2.5.1",
+      "co.fs2" %% "fs2-core" % fs2Version,
+      "co.fs2" %% "fs2-io" % fs2Version % Test,
+      "org.typelevel" %% "cats-effect" % "2.5.3",
       "org.scalatest" %% "scalatest" % "3.2.9" % Test,
       "io.circe" %% "circe-core" % "0.14.1",
       "io.circe" %% "circe-parser" % "0.14.1" % Test,

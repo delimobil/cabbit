@@ -8,6 +8,7 @@ import cats.effect.ContextShift
 import cats.effect.Resource
 import cats.effect.Sync
 import com.rabbitmq.client
+import ru.delimobil.cabbit.algebra.Channel
 import ru.delimobil.cabbit.algebra.ChannelConsumer
 import ru.delimobil.cabbit.algebra.ChannelDeclaration
 import ru.delimobil.cabbit.algebra.ChannelOnPool
@@ -36,9 +37,21 @@ final class RabbitClientConnection[F[_]: ConcurrentEffect: ContextShift](
   def createChannelConsumer: Resource[F, ChannelConsumer[F]] =
     createChannelOnPool.map(ch => new RabbitClientChannelConsumer[F](ch))
 
+  def createChannel: Resource[F, Channel[F]] =
+    createChannelOnPool.map(ch => new RabbitClientChannel[F](ch))
+
+  /* blocks on the thread :( */
+  def isOpen: F[Boolean] =
+    Sync[F].delay(raw.isOpen)
+
   private def createChannelOnPool: Resource[F, ChannelOnPool[F]] =
     for {
       blocker <- Blocker.fromExecutorService(getChannelExecutor)
-      rawChannel <- Resource.fromAutoCloseableBlocking(blocker)(Sync[F].delay(raw.createChannel()))
+      // Doesn't use Resource.fromAutoCloseable because of custom error handler
+      acquire = blocker.blockOn(Sync[F].delay(raw.createChannel()))
+      rawChannel <- Resource.make(acquire)(channel => blocker.delay(closeChannel(channel)))
     } yield new RabbitClientChannelOnPool(rawChannel, blocker)
+
+  private def closeChannel(ch: client.Channel): Unit =
+    try { ch.close() } catch { case _: client.AlreadyClosedException => () }
 }
