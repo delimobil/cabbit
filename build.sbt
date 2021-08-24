@@ -1,7 +1,7 @@
 ThisBuild / scalaVersion := "2.13.6"
 ThisBuild / organization := "ru.delimobil"
 
-val fs2Version = "2.5.6"
+val fs2Version = "2.5.9"
 
 val root = (project in file("."))
   .settings(
