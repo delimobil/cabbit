@@ -39,24 +39,25 @@ object declaration {
 
   case class QueueDeclaration(
     queueName: QueueName,
-    durable: DurableConfig,
-    exclusive: ExclusiveConfig,
-    autoDelete: AutoDeleteConfig,
-    arguments: Arguments
+    durable: DurableConfig = DurableConfig.NonDurable,
+    exclusive: ExclusiveConfig = ExclusiveConfig.Exclusive,
+    autoDelete: AutoDeleteConfig = AutoDeleteConfig.AutoDelete,
+    arguments: Arguments = Map.empty,
   )
 
   case class ExchangeDeclaration(
     exchangeName: ExchangeName,
     exchangeType: BuiltinExchangeType,
-    durable: DurableConfig,
-    autoDelete: AutoDeleteConfig,
-    internal: InternalConfig,
-    arguments: Arguments
+    durable: DurableConfig = DurableConfig.NonDurable,
+    autoDelete: AutoDeleteConfig = AutoDeleteConfig.NonAutoDelete,
+    internal: InternalConfig = InternalConfig.NonInternal,
+    arguments: Arguments = Map.empty,
   )
 
   case class BindDeclaration(
     queueName: QueueName,
     exchangeName: ExchangeName,
-    routingKey: RoutingKey
+    routingKey: RoutingKey,
+    arguments: Arguments = Map.empty,
   )
 }

@@ -57,7 +57,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     closeIO.unsafeRunSync()
   }
 
-  test("connection is closed") {
+  ignore("connection is closed") {
     val actual = checkShutdownNotifier[IO, Connection[IO]](container)(Resource.pure[IO, Connection[IO]](_))
     assertResult((true, false))(actual)
   }
