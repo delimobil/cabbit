@@ -6,7 +6,6 @@ import java.nio.charset.StandardCharsets
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 import java.util.zip.ZipException
-
 import cats.syntax.either._
 
 case class ContentEncoding(raw: String) extends AnyVal

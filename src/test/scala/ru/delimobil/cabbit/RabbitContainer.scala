@@ -10,7 +10,6 @@ import cats.effect.ContextShift
 import ru.delimobil.cabbit.algebra.Connection
 import cats.data.NonEmptyList
 import ru.delimobil.cabbit.config.CabbitConfig
-
 import scala.concurrent.duration._
 
 class RabbitContainer private {
@@ -30,7 +29,7 @@ object RabbitContainer {
     Resource.make(Sync[F].delay(new RabbitContainer))(provider => Sync[F].delay(provider.container.stop()))
 
   def makeConnection[F[_]: ConcurrentEffect: ContextShift](
-    container: RabbitContainer
+    container: RabbitContainer,
   ): Resource[F, Connection[F]] = {
     val nodes = NonEmptyList.one(CabbitConfig.CabbitNodeConfig(container.host, container.port))
     val config = CabbitConfig(nodes, virtualHost = "/", 60.seconds, username = None, password = None)

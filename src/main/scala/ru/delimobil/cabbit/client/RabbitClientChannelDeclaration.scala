@@ -10,7 +10,6 @@ import ru.delimobil.cabbit.algebra.QueueName
 import ru.delimobil.cabbit.config.declaration.BindDeclaration
 import ru.delimobil.cabbit.config.declaration.ExchangeDeclaration
 import ru.delimobil.cabbit.config.declaration.QueueDeclaration
-
 import scala.jdk.CollectionConverters._
 
 final class RabbitClientChannelDeclaration[F[_]: Functor](

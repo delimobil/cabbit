@@ -1,7 +1,6 @@
 package ru.delimobil.cabbit
 
 import java.util.UUID
-
 import cats.Parallel
 import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
@@ -33,7 +32,6 @@ import ru.delimobil.cabbit.CabbitSuite._
 import ru.delimobil.cabbit.algebra.ContentEncoding._
 import ru.delimobil.cabbit.algebra._
 import ru.delimobil.cabbit.config.declaration._
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.Random

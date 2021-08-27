@@ -15,7 +15,6 @@ import ru.delimobil.cabbit.config.declaration.ExchangeDeclaration
 import ru.delimobil.cabbit.config.declaration.ExclusiveConfig
 import ru.delimobil.cabbit.config.declaration.InternalConfig
 import ru.delimobil.cabbit.config.declaration.QueueDeclaration
-
 import scala.concurrent.duration.FiniteDuration
 
 object Config {

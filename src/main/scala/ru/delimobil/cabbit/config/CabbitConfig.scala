@@ -5,7 +5,6 @@ import cats.syntax.option._
 import com.rabbitmq.client.DefaultSaslConfig
 import com.rabbitmq.client.SaslConfig
 import ru.delimobil.cabbit.config.CabbitConfig._
-
 import javax.net.ssl.SSLContext
 import scala.concurrent.duration.FiniteDuration
 

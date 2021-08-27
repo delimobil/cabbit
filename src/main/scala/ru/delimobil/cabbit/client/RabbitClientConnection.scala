@@ -1,7 +1,6 @@
 package ru.delimobil.cabbit.client
 
 import java.util.concurrent.Executors
-
 import cats.effect.Blocker
 import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
@@ -53,5 +52,6 @@ final class RabbitClientConnection[F[_]: ConcurrentEffect: ContextShift](
     } yield new RabbitClientChannelOnPool(rawChannel, blocker)
 
   private def closeChannel(ch: client.Channel): Unit =
-    try { ch.close() } catch { case _: client.AlreadyClosedException => () }
+    try { ch.close() }
+    catch { case _: client.AlreadyClosedException => () }
 }

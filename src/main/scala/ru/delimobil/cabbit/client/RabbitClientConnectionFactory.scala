@@ -8,7 +8,6 @@ import com.rabbitmq.client
 import ru.delimobil.cabbit.algebra.Connection
 import ru.delimobil.cabbit.algebra.ConnectionFactory
 import ru.delimobil.cabbit.config.CabbitConfig
-
 import scala.jdk.CollectionConverters._
 
 final class RabbitClientConnectionFactory[F[_]: ConcurrentEffect: ContextShift](

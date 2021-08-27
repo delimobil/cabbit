@@ -10,7 +10,7 @@ trait ChannelConsumer[F[_]] extends ChannelAcker[F] {
   def basicConsume(
     queue: QueueName,
     deliverCallback: client.DeliverCallback,
-    cancelCallback: client.CancelCallback
+    cancelCallback: client.CancelCallback,
   ): F[ConsumerTag]
 
   def basicConsume(queue: QueueName, callback: client.Consumer): F[ConsumerTag]
@@ -19,6 +19,6 @@ trait ChannelConsumer[F[_]] extends ChannelAcker[F] {
 
   def deliveryStream(
     queue: QueueName,
-    prefetchCount: Int
+    prefetchCount: Int,
   ): F[(ConsumerTag, Stream[F, client.Delivery])]
 }
