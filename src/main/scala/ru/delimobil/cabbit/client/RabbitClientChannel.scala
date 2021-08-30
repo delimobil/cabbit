@@ -18,7 +18,7 @@ final class RabbitClientChannel[F[_]: ConcurrentEffect](channelOnPool: ChannelOn
 
   private val declarator = new RabbitClientChannelDeclaration(channelOnPool)
 
-  private val consumer = new RabbitClientChannelConsumer(channelOnPool)
+  private val consumer = new RabbitClientChannelConsumer(channelOnPool, RabbitClientConsumerProvider.instance[F])
 
   private val publisher = new RabbitClientChannelPublisher(channelOnPool)
 
