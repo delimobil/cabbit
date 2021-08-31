@@ -5,6 +5,7 @@ import java.util.UUID
 import cats.Parallel
 import cats.effect.ConcurrentEffect
 import cats.effect.Resource
+import cats.effect.Sync
 import cats.effect.Timer
 import cats.effect.syntax.all._
 import cats.syntax.all._
@@ -68,7 +69,7 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](val ch: Channel
     }
 
   def declareRelease(bind: BindDeclaration): F[Unit] =
-    ch.queueUnbind(bind) <* ch.exchangeDelete(bind.exchangeName) <* ch.queueDelete(bind.queueName)
+    ch.exchangeDelete(bind.exchangeName) <* ch.queueDelete(bind.queueName)
 
   def useRandomlyDeclaredIO(qProps: Arguments)(testFunc: (QueueDeclaration, BindDeclaration) => F[Unit]): F[Unit] =
     declareAcquire(qProps).bracket { case (queue, bind) => testFunc(queue, bind) } (res => declareRelease(res._2))
@@ -90,26 +91,32 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](val ch: Channel
   def useWithAE(
     rk: RoutingKey
   )(testFunc: (ExchangeDeclaration, QueueDeclaration, QueueDeclaration) => F[Unit]): Unit =
-    (uuidIO, uuidIO)
+    (uuidIO, uuidIO, uuidIO, uuidIO)
       .tupled
-      .flatMap { case (uuid1, uuid2) =>
+      .flatMap { case (uuid1, uuid2, uuid3, uuid4) =>
         val aeExchange = fanout(uuid1)
-        val aeQueue = nonExclusive(uuid1, Map.empty)
+        val aeQueue = nonExclusive(uuid2, Map.empty)
         val aeBind = BindDeclaration(aeQueue.queueName, aeExchange.exchangeName, RoutingKey(""))
         val aeDec = ch.exchangeDeclare(aeExchange) *> ch.queueDeclare(aeQueue) *> ch.queueBind(aeBind)
 
-        val topicExchange = topic(uuid2, Map("alternate-exchange" -> aeExchange.exchangeName.name))
-        val topicQueue = nonExclusive(uuid2, Map.empty)
-        val topicBind = BindDeclaration(topicQueue.queueName, topicExchange.exchangeName, rk)
-        val topicDec = ch.exchangeDeclare(topicExchange) *> ch.queueDeclare(topicQueue) *> ch.queueBind(topicBind)
+        val topicExchange = topic(uuid3, Map("alternate-exchange" -> aeExchange.exchangeName.name))
+        val topicDec = ch.exchangeDeclare(topicExchange) *> addBind(topicExchange.exchangeName, rk)
 
-        aeDec *> topicDec.as((topicExchange, topicQueue, aeQueue, aeBind, topicBind))
+        aeDec *> topicDec.map { case(queue, bind) => (topicExchange, queue, aeQueue, aeBind, bind) }
       }
       .bracket { case (ex, q1, q2, _, _) =>
         testFunc(ex, q1, q2)
       } (res => declareRelease(res._4) *> declareRelease(res._5))
       .toIO
       .unsafeRunSync()
+
+  def addBind(topic: ExchangeName, rk: RoutingKey): F[(QueueDeclaration, BindDeclaration)] =
+    uuidIO
+      .flatMap { uuid =>
+        val topicQueue = nonExclusive(uuid, Map.empty)
+        val topicBind = BindDeclaration(topicQueue.queueName, topic, rk)
+        ch.queueDeclare(topicQueue) *> ch.queueBind(topicBind).as((topicQueue, topicBind))
+      }
 
   def declareExclusive(
     channel1: ChannelDeclaration[F],

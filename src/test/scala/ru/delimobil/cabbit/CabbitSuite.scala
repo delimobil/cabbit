@@ -303,6 +303,40 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     }
   }
 
+  test("reject at alternate-queue DOESN'T return to newly binded to exchange queue") {
+    val routingKey = RoutingKey("valid.#")
+    val routedKey = RoutingKey("valid.key")
+    val routedMessage = "valid-message"
+
+    val nonRoutingKey = RoutingKey("invalid.#")
+    val nonRoutedKey = RoutingKey("invalid.key")
+    val nonRoutedMessage = "invalid-message"
+
+    val newlyRoutedKey = RoutingKey("invalid.key")
+    val newlyRoutedMessage = "new-message"
+
+    rabbitUtils.useWithAE(routingKey) { case (topicEx, routedQueue, nonRoutedQueue) =>
+      val exName = topicEx.exchangeName
+      for {
+        _ <- rabbitUtils.publishOne(exName, routedKey, routedMessage)
+        _ <- rabbitUtils.publishOne(exName, nonRoutedKey, nonRoutedMessage)
+        getResponse <- rabbitUtils.ch.basicGet(nonRoutedQueue.queueName, autoAck = false)
+        (queue, _) <- rabbitUtils.addBind(topicEx.exchangeName, nonRoutingKey)
+        _ <- sleep
+        _ <- rabbitUtils.ch.basicReject(DeliveryTag(getResponse.getEnvelope.getDeliveryTag), requeue = true)
+        _ <- rabbitUtils.publishOne(exName, newlyRoutedKey, newlyRoutedMessage)
+        _ <- sleep
+        routed <- rabbitUtils.readAll(routedQueue.queueName)
+        nonRouted <- rabbitUtils.readAll(nonRoutedQueue.queueName)
+        newlyRouted <- rabbitUtils.readAll(queue.queueName)
+        _ = assert(routed == List(Right(Json.fromString(routedMessage))))
+        _ = assert(nonRouted == List(Right(Json.fromString(nonRoutedMessage))))
+        _ = assert(newlyRouted == List(Right(Json.fromString(newlyRoutedMessage))))
+        _ <- rabbitUtils.ch.queueDelete(queue.queueName)
+      } yield {}
+    }
+  }
+
   private def checkShutdownNotifier[F[_]: ConcurrentEffect: ContextShift: Timer, T <: ShutdownNotifier[F]](
     container: RabbitContainer
   )(
