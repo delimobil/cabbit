@@ -1,9 +1,7 @@
 package ru.delimobil.cabbit.config
 
 import com.rabbitmq.client.BuiltinExchangeType
-import ru.delimobil.cabbit.algebra.ExchangeName
-import ru.delimobil.cabbit.algebra.QueueName
-import ru.delimobil.cabbit.algebra.RoutingKey
+import ru.delimobil.cabbit.algebra._
 
 object declaration {
 
@@ -53,6 +51,21 @@ object declaration {
     internal: InternalConfig = InternalConfig.NonInternal,
     arguments: Arguments = Map.empty,
   )
+
+  // AMQP-0-9-1 The server MUST, in each virtual host, pre-declare at least two direct exchange instances: one
+  // named "amq.direct", the other with no public name that serves as a default exchange for Publish methods.
+  //
+  // Thus, these Defaults are created automatically for every virtual host,
+  // mentioned here for the purpose of documentation.
+  private[cabbit] object Defaults {
+    // The server MUST pre-declare a direct exchange with no public name to act as the default
+    // exchange for content Publish methods and for default queue bindings
+    val ExchangeDeclarationDefault: ExchangeDeclaration =
+      ExchangeDeclaration(ExchangeNameDefault, BuiltinExchangeType.DIRECT)
+
+    def bindDeclarationDefault(queueName: QueueName): BindDeclaration =
+      BindDeclaration(queueName, ExchangeNameDefault, RoutingKey(queueName.name))
+  }
 
   case class BindDeclaration(
     queueName: QueueName,

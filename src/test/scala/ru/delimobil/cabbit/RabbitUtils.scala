@@ -5,11 +5,9 @@ import java.util.UUID
 import cats.Parallel
 import cats.effect.ConcurrentEffect
 import cats.effect.Resource
-import cats.effect.Sync
 import cats.effect.Timer
 import cats.effect.syntax.all._
 import cats.syntax.all._
-import com.rabbitmq.client.AMQP
 import com.rabbitmq.client.AMQP.Queue
 import com.rabbitmq.client.Delivery
 import fs2.Stream
@@ -17,14 +15,12 @@ import io.circe.Json
 import io.circe.parser.parse
 import ru.delimobil.cabbit.algebra.Channel
 import ru.delimobil.cabbit.algebra.ChannelDeclaration
+import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument
 import ru.delimobil.cabbit.algebra.Connection
 import ru.delimobil.cabbit.algebra.ConsumerTag
 import ru.delimobil.cabbit.algebra.ContentEncoding.decodeUtf8
 import ru.delimobil.cabbit.algebra.ContentEncoding.ungzip
-import ru.delimobil.cabbit.algebra.DeliveryTag
-import ru.delimobil.cabbit.algebra.ExchangeName
-import ru.delimobil.cabbit.algebra.QueueName
-import ru.delimobil.cabbit.algebra.RoutingKey
+import ru.delimobil.cabbit.algebra._
 import ru.delimobil.cabbit.config.declaration.Arguments
 import ru.delimobil.cabbit.config.declaration.BindDeclaration
 import ru.delimobil.cabbit.config.declaration.ExchangeDeclaration
@@ -60,7 +56,7 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](val ch: Channel
     messages.traverse_(publishOne(bind.exchangeName, bind.routingKey, _))
 
   def publishOne(exchange: ExchangeName, key: RoutingKey, msg: String): F[Unit] =
-    ch.basicPublish(exchange, key, new AMQP.BasicProperties, mandatory = true, msg)
+    ch.basicPublish(exchange, key, msg, mandatory = MandatoryArgument.Mandatory)
 
   def declareAcquire(qProps: Arguments): F[(QueueDeclaration, BindDeclaration)] =
     uuidIO.flatMap { uuid =>
@@ -91,12 +87,12 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](val ch: Channel
   def useWithAE(
     rk: RoutingKey
   )(testFunc: (ExchangeDeclaration, QueueDeclaration, QueueDeclaration) => F[Unit]): Unit =
-    (uuidIO, uuidIO, uuidIO, uuidIO)
+    (uuidIO, uuidIO, uuidIO)
       .tupled
-      .flatMap { case (uuid1, uuid2, uuid3, uuid4) =>
+      .flatMap { case (uuid1, uuid2, uuid3) =>
         val aeExchange = fanout(uuid1)
-        val aeQueue = nonExclusive(uuid2, Map.empty)
-        val aeBind = BindDeclaration(aeQueue.queueName, aeExchange.exchangeName, RoutingKey(""))
+        val aeQueue = getQueue(uuid2, Map.empty)
+        val aeBind = BindDeclaration(aeQueue.queueName, aeExchange.exchangeName, RoutingKeyDefault)
         val aeDec = ch.exchangeDeclare(aeExchange) *> ch.queueDeclare(aeQueue) *> ch.queueBind(aeBind)
 
         val topicExchange = topic(uuid3, Map("alternate-exchange" -> aeExchange.exchangeName.name))
@@ -113,7 +109,7 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](val ch: Channel
   def addBind(topic: ExchangeName, rk: RoutingKey): F[(QueueDeclaration, BindDeclaration)] =
     uuidIO
       .flatMap { uuid =>
-        val topicQueue = nonExclusive(uuid, Map.empty)
+        val topicQueue = getQueue(uuid, Map.empty)
         val topicBind = BindDeclaration(topicQueue.queueName, topic, rk)
         ch.queueDeclare(topicQueue) *> ch.queueBind(topicBind).as((topicQueue, topicBind))
       }
@@ -124,7 +120,7 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](val ch: Channel
   ): F[(Either[Throwable, Queue.DeclareOk], Either[Throwable, Queue.DeclareOk])] =
     uuidIO
       .flatMap { uuid =>
-        val queue = exclusive(uuid)
+        val queue = getQueue(uuid)
         (channel1.queueDeclare(queue).attempt, channel2.queueDeclare(queue).attempt).parTupled
       }
 
@@ -133,7 +129,7 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](val ch: Channel
     qProps: Arguments,
   ): (ExchangeDeclaration, QueueDeclaration, BindDeclaration) = {
     val exchange = direct(uuid)
-    val queue = nonExclusive(uuid, qProps)
+    val queue = getQueue(uuid, qProps)
     val binding = BindDeclaration(queue.queueName, exchange.exchangeName, RoutingKey("the-key"))
 
     (exchange, queue, binding)

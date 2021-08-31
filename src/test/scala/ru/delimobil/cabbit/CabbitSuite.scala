@@ -93,7 +93,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     rabbitUtils.useRandomlyDeclared(Map.empty) {
       case (queue, bind) =>
         for {
-          _ <- rabbitUtils.publish(List("hello from fs2-rabbit"), bind)
+          _ <- rabbitUtils.publish(List("hello from cabbit"), bind)
           _ <- sleep
           declareResult <- rabbitUtils.ch.queueDeclare(queue)
           _ = assert(declareResult.getMessageCount == 1)
@@ -102,7 +102,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("consumer `basicGet` `autoAck = true`") {
-    val message = "hello from fs2-rabbit"
+    val message = "hello from cabbit"
 
     rabbitUtils.useRandomlyDeclared(Map.empty) {
       case (queue, bind) =>
@@ -120,7 +120,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("consumer rejects `basicGet`, `requeue = true`") {
-    val message = "hello from fs2-rabbit"
+    val message = "hello from cabbit"
 
     rabbitUtils.useRandomlyDeclared(Map.empty) {
       case (queue, bind) =>
@@ -140,7 +140,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("consumer rejects `basicGet` `requeue = false`") {
-    val message = "hello from fs2-rabbit"
+    val message = "hello from cabbit"
 
     rabbitUtils.useRandomlyDeclared(Map.empty) {
       case (queue, bind) =>
@@ -181,7 +181,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   ignore("consumer completes on cancel, msg gets requeued") {
-    val messages = (1 to 2).map(i => s"hello from fs2-rabbit-$i").toList
+    val messages = (1 to 2).map(i => s"hello from cabbit-$i").toList
 
     rabbitUtils.useRandomlyDeclared(Map.empty) {
       case (queue, bind) =>
@@ -242,7 +242,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("ten thousand requeues") {
-    val message = "hello from fs2-rabbit"
+    val message = "hello from cabbit"
     val amount = 10_000
     rabbitUtils.useRandomlyDeclared(Map.empty) {
       case (_, bind) =>
@@ -266,7 +266,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("dead-letter & max-length") {
-    val messages = (1 to 10).map(i => s"hello from fs2-rabbit-$i").toList
+    val messages = (1 to 10).map(i => s"hello from cabbit-$i").toList
 
     rabbitUtils
       .useWithDeadQueue(Some(7)) { case (dead, queue, bind) =>
