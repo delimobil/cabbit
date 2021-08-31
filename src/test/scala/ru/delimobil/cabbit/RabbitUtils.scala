@@ -13,11 +13,7 @@ import com.rabbitmq.client.Delivery
 import fs2.Stream
 import io.circe.Json
 import io.circe.parser.parse
-import ru.delimobil.cabbit.algebra.Channel
-import ru.delimobil.cabbit.algebra.ChannelDeclaration
 import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument
-import ru.delimobil.cabbit.algebra.Connection
-import ru.delimobil.cabbit.algebra.ConsumerTag
 import ru.delimobil.cabbit.algebra.ContentEncoding.decodeUtf8
 import ru.delimobil.cabbit.algebra.ContentEncoding.ungzip
 import ru.delimobil.cabbit.algebra._
