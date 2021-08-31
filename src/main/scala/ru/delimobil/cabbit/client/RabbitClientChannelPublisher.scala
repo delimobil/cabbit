@@ -31,13 +31,7 @@ final class RabbitClientChannelPublisher[F[_]](
     mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
     properties: BasicProperties = new BasicProperties(),
   )(implicit encoder: BodyEncoder[V]): F[Unit] = {
-    val props =
-      properties
-        .builder()
-        .contentType(encoder.contentType.raw)
-        .contentEncoding(encoder.contentType.raw)
-        .build()
-
+    val props = encoder.alterProps(properties)
     channelOnPool.delay(_.basicPublish(exchangeName.name, routingKey.name, mandatory.bool, props, encoder.encode(body)))
   }
 
