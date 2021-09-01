@@ -9,7 +9,7 @@ val root = (project in file("."))
     name := "cabbit",
     version := "0.0.10-SNAPSHOT",
     scalacOptions ++= {
-      (CrossVersion.partialVersion(scalaVersion.value) match {
+      CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
           Seq("-source:3.0-migration")
         case _ =>
@@ -18,7 +18,7 @@ val root = (project in file("."))
             "-Xfatal-warnings",
             "-Wunused:imports,privates,locals",
           )
-      })
+      }
     },
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
@@ -35,8 +35,8 @@ val root = (project in file("."))
       "org.scalatest" %% "scalatest" % "3.2.9" % Test,
       "io.circe" %% "circe-core" % "0.14.1",
       "io.circe" %% "circe-parser" % "0.14.1" % Test,
-      "com.rabbitmq" % "amqp-client" % "5.13.0",
-      "com.dimafeng" %% "testcontainers-scala-rabbitmq" % "0.39.6" % Test,
+      "com.rabbitmq" % "amqp-client" % "5.13.1",
+      "com.dimafeng" %% "testcontainers-scala-rabbitmq" % "0.39.7" % Test,
       "org.slf4j" % "slf4j-simple" % "1.7.32" % Test,
     ),
   )
