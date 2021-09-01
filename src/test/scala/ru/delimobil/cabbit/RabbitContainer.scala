@@ -22,19 +22,17 @@ class RabbitContainer private {
   val host: Host = container.host
 
   val port: Port = container.amqpPort
+
+  def makeConnection[F[_]: ConcurrentEffect: ContextShift]: Resource[F, Connection[F]] = {
+    val nodes = NonEmptyList.one(CabbitConfig.CabbitNodeConfig(host, port))
+    val config = CabbitConfig(nodes, virtualHost = "/", 60.seconds, username = None, password = None)
+    val connectionFactory = ConnectionFactoryProvider.provide[F](config)
+    connectionFactory.newConnection(None)
+  }
 }
 
 object RabbitContainer {
 
   def make[F[_]: Sync]: Resource[F, RabbitContainer] =
     Resource.make(Sync[F].delay(new RabbitContainer))(provider => Sync[F].delay(provider.container.stop()))
-
-  def makeConnection[F[_]: ConcurrentEffect: ContextShift](
-    container: RabbitContainer
-  ): Resource[F, Connection[F]] = {
-    val nodes = NonEmptyList.one(CabbitConfig.CabbitNodeConfig(container.host, container.port))
-    val config = CabbitConfig(nodes, virtualHost = "/", 60.seconds, username = None, password = None)
-    val connectionFactory = ConnectionFactoryProvider.provide[F](config)
-    connectionFactory.newConnection(None)
-  }
 }

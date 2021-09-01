@@ -50,21 +50,21 @@ final class RabbitClientChannel[F[_]: ConcurrentEffect](channelOnPool: ChannelOn
   def exchangeDelete(exchangeName: ExchangeName): F[Unit] =
     declarator.exchangeDelete(exchangeName)
 
-  def basicPublishDefaultDirect[V](
-    routingKey: RoutingKey,
+  def basicPublishDirect[V](
+    queueName: QueueName,
     body: V,
     mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
     properties: BasicProperties = new BasicProperties(),
   )(implicit encoder: BodyEncoder[V]): F[Unit] =
-    publisher.basicPublishDefaultDirect(routingKey, body, mandatory, properties)
+    publisher.basicPublishDirect(queueName, body, mandatory, properties)
 
-  def basicPublishDefaultFanout[V](
+  def basicPublishFanout[V](
     exchangeName: ExchangeName,
     body: V,
     mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
     properties: BasicProperties = new BasicProperties(),
   )(implicit encoder: BodyEncoder[V]): F[Unit] =
-    publisher.basicPublishDefaultFanout(exchangeName, body, mandatory, properties)
+    publisher.basicPublishFanout(exchangeName, body, mandatory, properties)
 
   def basicPublish[V](
     exchangeName: ExchangeName,

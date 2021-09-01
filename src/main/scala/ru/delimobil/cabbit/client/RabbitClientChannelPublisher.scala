@@ -8,15 +8,15 @@ final class RabbitClientChannelPublisher[F[_]](
   channelOnPool: ChannelOnPool[F]
 ) extends ChannelPublisher[F] {
 
-  def basicPublishDefaultDirect[V](
-    routingKey: RoutingKey,
+  def basicPublishDirect[V](
+    queueName: QueueName,
     body: V,
     mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
     properties: BasicProperties = new BasicProperties(),
   )(implicit encoder: BodyEncoder[V]): F[Unit] =
-    basicPublish(ExchangeNameDefault, routingKey, body, mandatory, properties)
+    basicPublish(ExchangeNameDefault, RoutingKey(queueName.name), body, mandatory, properties)
 
-  def basicPublishDefaultFanout[V](
+  def basicPublishFanout[V](
     exchangeName: ExchangeName,
     body: V,
     mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,

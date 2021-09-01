@@ -4,11 +4,11 @@ import java.util.UUID
 
 import cats.Parallel
 import cats.effect.ConcurrentEffect
-import cats.effect.Resource
 import cats.effect.Timer
 import cats.effect.syntax.all._
 import cats.syntax.all._
 import com.rabbitmq.client.AMQP.Queue
+import com.rabbitmq.client.BuiltinExchangeType
 import com.rabbitmq.client.Delivery
 import fs2.Stream
 import io.circe.Json
@@ -25,7 +25,7 @@ import ru.delimobil.cabbit.config.declaration.QueueDeclaration
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.duration._
 
-final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](val ch: Channel[F]) {
+final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](ch: Channel[F]) {
 
   import ru.delimobil.cabbit.algebra.BodyEncoder.instances.jsonGzip
 
@@ -69,46 +69,42 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](val ch: Channel
   def useRandomlyDeclared(qProps: Arguments)(testFunc: (QueueDeclaration, BindDeclaration) => F[Unit]): Unit =
     useRandomlyDeclaredIO(qProps)(testFunc).toIO.unsafeRunSync()
 
-  def useWithDeadQueue(
-    maxLength: Option[Int]
-  )(testFunc: (QueueDeclaration, QueueDeclaration, BindDeclaration) => F[Unit]): Unit =
-    declareAcquire(Map.empty)
-      .bracket { case (deadQueue, deadBind) =>
-        val args = Map("x-dead-letter-exchange" -> deadBind.exchangeName.name) ++ maxLength.map("x-max-length" -> _)
-        useRandomlyDeclaredIO(args) { case (queue, bind) => testFunc(deadQueue, queue, bind) }
-      } (res => declareRelease(res._2))
-      .toIO
-      .unsafeRunSync()
+  private def rndEx: F[ExchangeName] = uuidIO.map(uuid => ExchangeName(uuid.toString))
 
-  def useWithAE(
-    rk: RoutingKey
-  )(testFunc: (ExchangeDeclaration, QueueDeclaration, QueueDeclaration) => F[Unit]): Unit =
-    (uuidIO, uuidIO, uuidIO)
-      .tupled
-      .flatMap { case (uuid1, uuid2, uuid3) =>
-        val aeExchange = fanout(uuid1)
-        val aeQueue = getQueue(uuid2, Map.empty)
-        val aeBind = BindDeclaration(aeQueue.queueName, aeExchange.exchangeName, RoutingKeyDefault)
-        val aeDec = ch.exchangeDeclare(aeExchange) *> ch.queueDeclare(aeQueue) *> ch.queueBind(aeBind)
-
-        val topicExchange = topic(uuid3, Map("alternate-exchange" -> aeExchange.exchangeName.name))
-        val topicDec = ch.exchangeDeclare(topicExchange) *> addBind(topicExchange.exchangeName, rk)
-
-        aeDec *> topicDec.map { case(queue, bind) => (topicExchange, queue, aeQueue, aeBind, bind) }
+  def bindToExIO(exName: ExchangeName, rk: RoutingKey, qProps: Arguments): F[BindDeclaration] =
+    ch.queueDeclare(QueueDeclaration(QueueNameDefault, arguments = qProps))
+      .flatMap { ok =>
+        val bind = BindDeclaration(QueueName(ok.getQueue), exName, rk)
+        ch.queueBind(bind).as(bind)
       }
-      .bracket { case (ex, q1, q2, _, _) =>
-        testFunc(ex, q1, q2)
-      } (res => declareRelease(res._4) *> declareRelease(res._5))
-      .toIO
-      .unsafeRunSync()
 
-  def addBind(topic: ExchangeName, rk: RoutingKey): F[(QueueDeclaration, BindDeclaration)] =
-    uuidIO
-      .flatMap { uuid =>
-        val topicQueue = getQueue(uuid, Map.empty)
-        val topicBind = BindDeclaration(topicQueue.queueName, topic, rk)
-        ch.queueDeclare(topicQueue) *> ch.queueBind(topicBind).as((topicQueue, topicBind))
-      }
+  // rndExchange + autonameQueue(props) + FANOUT
+  def bindedIO(qProps: Arguments): F[BindDeclaration] =
+    rndEx.flatMap { exName =>
+      ch.exchangeDeclare(ExchangeDeclaration(exName, BuiltinExchangeType.FANOUT))
+        .productR(bindToExIO(exName, RoutingKeyDefault, qProps))
+    }
+
+  def useBinded(qProps: Arguments)(testFunc: BindDeclaration => F[Unit]): Unit =
+    bindedIO(qProps).flatMap(testFunc).toIO.unsafeRunSync()
+
+  def queueDeclaredIO(qProps: Arguments): F[QueueName] =
+    ch.queueDeclare(QueueDeclaration(QueueNameDefault, arguments = qProps)).map(ok => QueueName(ok.getQueue))
+
+  def useQueueDeclared(qProps: Arguments)(testFunc: QueueName => F[Unit]): Unit =
+    queueDeclaredIO(qProps).flatMap(testFunc).toIO.unsafeRunSync()
+
+  def aeIO(rk: RoutingKey): F[(ExchangeName, QueueName, QueueName)] =
+    for {
+      alternateBind <- bindedIO(Map.empty)
+      args = Map("alternate-exchange" -> alternateBind.exchangeName.name)
+      primaryEx <- rndEx
+      _ <- ch.exchangeDeclare(ExchangeDeclaration(primaryEx, BuiltinExchangeType.TOPIC, arguments = args))
+      primaryBind <- bindToExIO(primaryEx, rk, Map.empty)
+    } yield (primaryEx, primaryBind.queueName, alternateBind.queueName)
+
+  def useAe(rk: RoutingKey)(testFunc: (ExchangeName, QueueName, QueueName) => F[Unit]): Unit =
+    aeIO(rk).flatMap(testFunc.tupled).toIO.unsafeRunSync()
 
   def declareExclusive(
     channel1: ChannelDeclaration[F],
@@ -130,10 +126,4 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](val ch: Channel
 
     (exchange, queue, binding)
   }
-}
-
-object RabbitUtils {
-
-  def make[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connection[F]): Resource[F, RabbitUtils[F]] =
-    conn.createChannel.map(ch => new RabbitUtils(ch))
 }

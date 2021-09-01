@@ -5,14 +5,14 @@ import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument
 
 trait ChannelPublisher[F[_]] extends ShutdownNotifier[F] {
 
-  def basicPublishDefaultDirect[V](
-    routingKey: RoutingKey,
+  def basicPublishDirect[V](
+    queueName: QueueName,
     body: V,
     mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
     properties: BasicProperties = new BasicProperties(),
   )(implicit encoder: BodyEncoder[V]): F[Unit]
 
-  def basicPublishDefaultFanout[V](
+  def basicPublishFanout[V](
     exchangeName: ExchangeName,
     body: V,
     mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
