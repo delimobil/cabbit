@@ -1,6 +1,6 @@
 ThisBuild / scalaVersion := "2.13.6"
 ThisBuild / organization := "ru.delimobil"
-ThisBuild / crossScalaVersions ++= Seq("2.13.6", "3.0.1")
+ThisBuild / crossScalaVersions ++= Seq("2.13.6", "3.0.2")
 
 val fs2Version = "2.5.9"
 
