@@ -24,8 +24,9 @@ import ru.delimobil.cabbit.config.declaration.QueueDeclaration
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.duration._
+import scala.reflect.ClassTag
 
-final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](ch: Channel[F]) {
+final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connection[F], ch: Channel[F]) {
 
   import ru.delimobil.cabbit.algebra.BodyEncoder.instances.jsonGzip
 
@@ -105,6 +106,20 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](ch: Channel[F])
 
   def useAlternateExchange(rk: RoutingKey)(testFunc: (ExchangeName, QueueName, QueueName) => F[Unit]): Unit =
     alternateExchangeIO(rk).flatMap(testFunc.tupled).toIO.unsafeRunSync()
+
+  def spoilChannel[Thr <: Throwable](f: Channel[F] => F[Unit])(implicit classTag: ClassTag[Thr]): Unit =
+    conn
+      .createChannel
+      .use { ch =>
+        f(ch).recoverWith { case ex =>
+          ch.isOpen.map { open =>
+            assert(classTag.runtimeClass.isAssignableFrom(ex.getClass), "Thr class is wrong")
+            assert(!open)
+          }
+        }
+      }
+      .toIO
+      .unsafeRunSync()
 
   def declareExclusive(
     channel1: ChannelDeclaration[F],

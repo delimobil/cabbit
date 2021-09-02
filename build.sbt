@@ -17,5 +17,6 @@ val root = (project in file("."))
       "com.rabbitmq" % "amqp-client" % "5.12.0",
       "com.dimafeng" %% "testcontainers-scala-rabbitmq" % "0.39.4" % Test,
       "org.slf4j" % "slf4j-simple" % "1.7.30" % Test
-    )
+    ),
+    Test / publishArtifact := true
   )

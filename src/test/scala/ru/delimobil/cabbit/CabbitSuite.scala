@@ -1,5 +1,8 @@
 package ru.delimobil.cabbit
 
+import java.io.IOException
+import java.util.UUID
+
 import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
 import cats.effect.IO
@@ -12,13 +15,16 @@ import cats.syntax.flatMap._
 import cats.syntax.foldable._
 import cats.syntax.functor._
 import cats.syntax.semigroupal._
+import com.rabbitmq.client.AMQP.Queue.DeclareOk
 import fs2.Stream
 import io.circe.Json
 import io.circe.parser.parse
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
+import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument.Mandatory
 import ru.delimobil.cabbit.algebra.ContentEncoding._
 import ru.delimobil.cabbit.algebra._
+import ru.delimobil.cabbit.config.declaration.QueueDeclaration
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -33,24 +39,30 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   private implicit val timer: Timer[IO] = IO.timer(scala.concurrent.ExecutionContext.global)
 
   private val sleep = timer.sleep(50.millis)
+  private val rndQueue = IO.delay(QueueName(UUID.randomUUID().toString))
 
   private var container: RabbitContainer = _
+  private var connection: Connection[IO] = _
   private var channel: Channel[IO] = _
   private var rabbitUtils: RabbitUtils[IO] = _
   private var closeIO: IO[Unit] = _
+
+  private def messagesN(n: Int) = (1 to n).map(i => s"hello from cabbit-$i").toList
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
     RabbitContainer
       .make[IO]
-      .mproduct(_.makeConnection[IO].flatMap(conn => conn.createChannel))
+      .mproduct(_.makeConnection[IO])
+      .mproduct(_._2.createChannel)
       .allocated
       .flatTap {
-        case ((cont, ch), closeAction) =>
+        case (((cont, conn), ch), closeAction) =>
           IO.delay {
             container = cont
+            connection = conn
             channel = ch
-            rabbitUtils = new RabbitUtils[IO](ch)
+            rabbitUtils = new RabbitUtils[IO](conn, ch)
             closeIO = closeAction
           }
       }
@@ -82,28 +94,42 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     assertResult((true, false))(actual)
   }
 
-  test("queue declaration returns state") {
-    rabbitUtils.useRandomlyDeclared(Map.empty) {
-      case (queue, _) =>
-        for {
-          declareResult <- channel.queueDeclare(queue)
-          _ = assert(declareResult.getQueue == queue.queueName.name)
-          _ = assert(declareResult.getConsumerCount == 0)
-          _ = assert(declareResult.getMessageCount == 0)
-        } yield {}
-      }
+  test("consume on not defined queue leads to an error") {
+    rabbitUtils.spoilChannel[IOException](ch => rndQueue.flatMap(ch.deliveryStream(_, 100).void))
   }
 
-  test("publisher publishes") {
-    rabbitUtils.useRandomlyDeclared(Map.empty) {
-      case (queue, bind) =>
-        for {
-          _ <- rabbitUtils.publish(List("hello from cabbit"), bind)
-          _ <- sleep
-          declareResult <- channel.queueDeclare(queue)
-          _ = assert(declareResult.getMessageCount == 1)
-        } yield {}
+  test("queue declaration on automatically defined queue leads to an error") {
+    rabbitUtils.spoilChannel[IOException] { ch =>
+      rabbitUtils
+        .queueDeclaredIO(Map.empty)
+        .flatMap(qName => ch.queueDeclare(QueueDeclaration(qName)))
+        .void
+    }
+  }
+
+  test("queue declaration returns state, publisher publishes, delivery stream subscribes") {
+    val nMessages = 3
+    val nConsumers = 2
+    rndQueue
+      .mproduct { qName =>
+        val declare = channel.queueDeclare(QueueDeclaration(qName))
+        val publish = messagesN(nMessages).traverse_(channel.basicPublishDirect(qName, _))
+        val subscribe = List.fill(nConsumers)(channel.deliveryStream(qName, 100)).sequence_
+
+        declare.product(publish *> sleep *> declare).product(subscribe *> sleep *> declare)
       }
+      .map { case (qName, ((ok1, ok2), ok3)) =>
+        def compare(ok: DeclareOk, consumers: Int, messages: Int) = {
+          assert(ok.getQueue == qName.name)
+          assert(ok.getConsumerCount == consumers)
+          assert(ok.getMessageCount == messages)
+        }
+
+        compare(ok1, 0, 0)
+        compare(ok2, 0, 3)
+        compare(ok3, 2, 0)
+      }
+      .unsafeRunSync()
   }
 
   test("consumer `basicGet` `autoAck = true`") {
