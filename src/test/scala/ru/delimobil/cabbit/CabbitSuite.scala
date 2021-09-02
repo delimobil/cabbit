@@ -295,7 +295,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     val routedMessage = "valid-message"
     val nonRoutedKey = RoutingKey("invalid.key")
     val nonRoutedMessage = "invalid-message"
-    rabbitUtils.useAe(routingKey) { case (exName, routedQueue, nonRoutedQueue) =>
+    rabbitUtils.useAlternateExchange(routingKey) { case (exName, routedQueue, nonRoutedQueue) =>
       channel
         .basicPublish(exName, routedKey, routedMessage)
         .productR(channel.basicPublish(exName, nonRoutedKey, nonRoutedMessage))
@@ -320,12 +320,12 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     val newlyRoutedKey = RoutingKey("invalid.key")
     val newlyRoutedMessage = "new-message"
 
-    rabbitUtils.useAe(routingKey) { case (exName, routedQueue, nonRoutedQueue) =>
+    rabbitUtils.useAlternateExchange(routingKey) { case (exName, routedQueue, nonRoutedQueue) =>
       for {
         _ <- channel.basicPublish(exName, routedKey, routedMessage)
         _ <- channel.basicPublish(exName, nonRoutedKey, nonRoutedMessage)
         getResponse <- channel.basicGet(nonRoutedQueue, autoAck = false)
-        bind <- rabbitUtils.bindToExIO(exName, nonRoutingKey, Map.empty)
+        bind <- rabbitUtils.bindQueueToExchangeIO(exName, nonRoutingKey, Map.empty)
         _ <- sleep
         _ <- channel.basicPublish(exName, newlyRoutedKey, newlyRoutedMessage)
         _ <- channel.basicReject(DeliveryTag(getResponse.getEnvelope.getDeliveryTag), requeue = true)

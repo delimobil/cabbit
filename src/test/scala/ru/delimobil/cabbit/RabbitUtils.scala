@@ -71,7 +71,7 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](ch: Channel[F])
 
   private def rndEx: F[ExchangeName] = uuidIO.map(uuid => ExchangeName(uuid.toString))
 
-  def bindToExIO(exName: ExchangeName, rk: RoutingKey, qProps: Arguments): F[BindDeclaration] =
+  def bindQueueToExchangeIO(exName: ExchangeName, rk: RoutingKey, qProps: Arguments): F[BindDeclaration] =
     ch.queueDeclare(QueueDeclaration(QueueNameDefault, arguments = qProps))
       .flatMap { ok =>
         val bind = BindDeclaration(QueueName(ok.getQueue), exName, rk)
@@ -82,7 +82,7 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](ch: Channel[F])
   def bindedIO(qProps: Arguments): F[BindDeclaration] =
     rndEx.flatMap { exName =>
       ch.exchangeDeclare(ExchangeDeclaration(exName, BuiltinExchangeType.FANOUT))
-        .productR(bindToExIO(exName, RoutingKeyDefault, qProps))
+        .productR(bindQueueToExchangeIO(exName, RoutingKeyDefault, qProps))
     }
 
   def useBinded(qProps: Arguments)(testFunc: BindDeclaration => F[Unit]): Unit =
@@ -94,17 +94,17 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](ch: Channel[F])
   def useQueueDeclared(qProps: Arguments)(testFunc: QueueName => F[Unit]): Unit =
     queueDeclaredIO(qProps).flatMap(testFunc).toIO.unsafeRunSync()
 
-  def aeIO(rk: RoutingKey): F[(ExchangeName, QueueName, QueueName)] =
+  def alternateExchangeIO(rk: RoutingKey): F[(ExchangeName, QueueName, QueueName)] =
     for {
       alternateBind <- bindedIO(Map.empty)
       args = Map("alternate-exchange" -> alternateBind.exchangeName.name)
       primaryEx <- rndEx
       _ <- ch.exchangeDeclare(ExchangeDeclaration(primaryEx, BuiltinExchangeType.TOPIC, arguments = args))
-      primaryBind <- bindToExIO(primaryEx, rk, Map.empty)
+      primaryBind <- bindQueueToExchangeIO(primaryEx, rk, Map.empty)
     } yield (primaryEx, primaryBind.queueName, alternateBind.queueName)
 
-  def useAe(rk: RoutingKey)(testFunc: (ExchangeName, QueueName, QueueName) => F[Unit]): Unit =
-    aeIO(rk).flatMap(testFunc.tupled).toIO.unsafeRunSync()
+  def useAlternateExchange(rk: RoutingKey)(testFunc: (ExchangeName, QueueName, QueueName) => F[Unit]): Unit =
+    alternateExchangeIO(rk).flatMap(testFunc.tupled).toIO.unsafeRunSync()
 
   def declareExclusive(
     channel1: ChannelDeclaration[F],
