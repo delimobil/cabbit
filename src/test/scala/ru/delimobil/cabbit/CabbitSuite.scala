@@ -17,11 +17,8 @@ import cats.syntax.functor._
 import cats.syntax.semigroupal._
 import com.rabbitmq.client.AMQP.Queue.DeclareOk
 import fs2.Stream
-import io.circe.Json
-import io.circe.parser.parse
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
-import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument.Mandatory
 import ru.delimobil.cabbit.algebra.ContentEncoding._
 import ru.delimobil.cabbit.algebra._
 import ru.delimobil.cabbit.config.declaration.QueueDeclaration
@@ -33,7 +30,7 @@ import scala.util.chaining._
 
 class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
-  import ru.delimobil.cabbit.algebra.BodyEncoder.instances.jsonGzip // change to textUtf8
+  import ru.delimobil.cabbit.algebra.BodyEncoder.instances.textUtf8
 
   private implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
   private implicit val timer: Timer[IO] = IO.timer(scala.concurrent.ExecutionContext.global)
@@ -98,7 +95,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     rabbitUtils.spoilChannel[IOException](ch => rndQueue.flatMap(ch.deliveryStream(_, 100).void))
   }
 
-  test("queue declaration on automatically defined queue leads to an error") {
+  test("queue declaration on automatically defined queue results in error") {
     rabbitUtils.spoilChannel[IOException] { ch =>
       rabbitUtils
         .queueDeclaredIO(Map.empty)
@@ -106,6 +103,8 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         .void
     }
   }
+
+  ignore("binding on default exchange results in error") { }
 
   test("queue declaration returns state, publisher publishes, delivery stream subscribes") {
     val nMessages = 3
@@ -142,8 +141,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
           _ <- sleep
           response <- channel.basicGet(bind.queueName, autoAck = true)
           declareOk <- channel.queueDeclare(queue)
-          bodyResponse = ungzip(response.getBody).map(decodeUtf8).flatMap(parse)
-          _ = assert(bodyResponse === Right(Json.fromString(message)))
+          _ = assert(decodeUtf8(response.getBody) === message)
           _ = assert(declareOk.getConsumerCount === 0)
           _ = assert(declareOk.getMessageCount === 0)
         } yield {}
@@ -162,8 +160,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
           _ <- channel.basicReject(DeliveryTag(response.getEnvelope.getDeliveryTag), requeue = true)
           _ <- sleep
           declareOk <- channel.queueDeclare(queue)
-          bodyResponse = ungzip(response.getBody).map(decodeUtf8).flatMap(parse)
-          _ = assert(bodyResponse === Right(Json.fromString(message)))
+          _ = assert(decodeUtf8(response.getBody) === message)
           _ = assert(declareOk.getConsumerCount === 0)
           _ = assert(declareOk.getMessageCount === 1)
         } yield {}
@@ -182,8 +179,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
           _ <- channel.basicReject(DeliveryTag(response.getEnvelope.getDeliveryTag), requeue = false)
           _ <- sleep
           declareOk <- channel.queueDeclare(queue)
-          bodyResponse = ungzip(response.getBody).map(decodeUtf8).flatMap(parse)
-          _ = assert(bodyResponse === Right(Json.fromString(message)))
+          _ = assert(decodeUtf8(response.getBody) === message)
           _ = assert(declareOk.getConsumerCount === 0)
           _ = assert(declareOk.getMessageCount === 0)
         } yield {}
@@ -205,8 +201,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
           bodies <- rabbitUtils.readAck(stream)
           _ = assert(declareOk.getConsumerCount == 1)
           _ = assert(declareOk.getMessageCount == (maxMessages - prefetched))
-          _ = assert(messages.length == bodies.length)
-          _ = assert(messages.map(v => Right(Json.fromString(v))) == bodies)
+          _ = assert(messages == bodies)
         } yield {}
       }
   }
@@ -307,8 +302,8 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         .flatMap(bind => rabbitUtils.readAll(deadLetterBind.queueName).product(rabbitUtils.readAll(bind.queueName)))
         .map { case (deadDeliveries, deliveries) =>
           val (left, right) = messages.splitAt(3)
-          assert(left.map(s => Right(Json.fromString(s))) == deadDeliveries)
-          assert(right.map(s => Right(Json.fromString(s))) == deliveries)
+          assert(left == deadDeliveries)
+          assert(right == deliveries)
         }
     }
   }
@@ -328,8 +323,8 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         .productR(sleep)
         .productR(rabbitUtils.readAll(routedQueue).product(rabbitUtils.readAll(nonRoutedQueue)))
         .map { case(routed, nonRouted) =>
-          assert(routed == List(Right(Json.fromString(routedMessage))))
-          assert(nonRouted == List(Right(Json.fromString(nonRoutedMessage))))
+          assert(routed == List(routedMessage))
+          assert(nonRouted == List(nonRoutedMessage))
         }
     }
   }
@@ -359,9 +354,9 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         routed <- rabbitUtils.readAll(routedQueue)
         nonRouted <- rabbitUtils.readAll(nonRoutedQueue)
         newlyRouted <- rabbitUtils.readAll(bind.queueName)
-        _ = assert(routed == List(Right(Json.fromString(routedMessage))))
-        _ = assert(nonRouted == List(Right(Json.fromString(nonRoutedMessage))))
-        _ = assert(newlyRouted == List(Right(Json.fromString(newlyRoutedMessage))))
+        _ = assert(routed == List(routedMessage))
+        _ = assert(nonRouted == List(nonRoutedMessage))
+        _ = assert(newlyRouted == List(newlyRoutedMessage))
       } yield {}
     }
   }
@@ -378,7 +373,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         _ <- timer.sleep(ttl.millis)
         (empty, dead) <- rabbitUtils.readAll(bind.queueName).product(rabbitUtils.readAll(deadLetterBind.queueName))
         _ = assert(empty == List.empty)
-        _ = assert(dead == List(Right(Json.fromString(message))))
+        _ = assert(dead == List(message))
       } yield {}
     }
   }

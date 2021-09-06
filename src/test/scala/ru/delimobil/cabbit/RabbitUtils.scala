@@ -2,6 +2,7 @@ package ru.delimobil.cabbit
 
 import java.util.UUID
 
+import cats.MonadError
 import cats.Parallel
 import cats.effect.ConcurrentEffect
 import cats.effect.Timer
@@ -11,11 +12,8 @@ import com.rabbitmq.client.AMQP.Queue
 import com.rabbitmq.client.BuiltinExchangeType
 import com.rabbitmq.client.Delivery
 import fs2.Stream
-import io.circe.Json
-import io.circe.parser.parse
 import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument
 import ru.delimobil.cabbit.algebra.ContentEncoding.decodeUtf8
-import ru.delimobil.cabbit.algebra.ContentEncoding.ungzip
 import ru.delimobil.cabbit.algebra._
 import ru.delimobil.cabbit.config.declaration.Arguments
 import ru.delimobil.cabbit.config.declaration.BindDeclaration
@@ -28,7 +26,7 @@ import scala.reflect.ClassTag
 
 final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connection[F], ch: Channel[F]) {
 
-  import ru.delimobil.cabbit.algebra.BodyEncoder.instances.jsonGzip
+  import ru.delimobil.cabbit.algebra.BodyEncoder.instances.textUtf8
 
   private val utils = new DeclareUtils[F]
 
@@ -37,16 +35,16 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
   def readAck(
     tuple: (ConsumerTag, Stream[F, Delivery]),
     timeout: FiniteDuration = 100.millis
-  ): F[List[Either[Exception, Json]]] =
+  ): F[List[String]] =
     tuple
       ._2
       .evalTap(d => ch.basicAck(DeliveryTag(d.getEnvelope.getDeliveryTag), multiple = false))
       .concurrently(Stream.eval_(Timer[F].sleep(timeout) *> ch.basicCancel(tuple._1)))
       .compile
       .toList
-      .map(_.map(d => ungzip(d.getBody).map(decodeUtf8).flatMap(parse)))
+      .map(_.map(d => decodeUtf8(d.getBody)))
 
-  def readAll(queue: QueueName, timeout: FiniteDuration = 100.millis): F[List[Either[Exception, Json]]] =
+  def readAll(queue: QueueName, timeout: FiniteDuration = 100.millis): F[List[String]] =
     ch.deliveryStream(queue, 100).flatMap(readAck(_, timeout))
 
   def publish(messages: List[String], bind: BindDeclaration): F[Unit] =
@@ -111,12 +109,18 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
     conn
       .createChannel
       .use { ch =>
-        f(ch).recoverWith { case ex =>
-          ch.isOpen.map { open =>
-            assert(classTag.runtimeClass.isAssignableFrom(ex.getClass), "Thr class is wrong")
-            assert(!open)
+        f(ch)
+          .attempt
+          .flatMap {
+            case Left(ex) =>
+              ch.isOpen.map { open =>
+                assert(classTag.runtimeClass.isAssignableFrom(ex.getClass), "Thr class is wrong")
+                assert(!open)
+              }
+            case Right(()) =>
+              val ex = new java.lang.AssertionError("assertion failed: expected error, found no one")
+              MonadError[F, Throwable].raiseError[Unit](ex)
           }
-        }
       }
       .toIO
       .unsafeRunSync()
