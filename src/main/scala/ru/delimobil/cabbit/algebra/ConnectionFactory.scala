@@ -4,5 +4,5 @@ import cats.effect.Resource
 
 trait ConnectionFactory[F[_]] {
 
-  def newConnection: Resource[F, Connection[F]]
+  def newConnection(appName: Option[String]): Resource[F, Connection[F]]
 }

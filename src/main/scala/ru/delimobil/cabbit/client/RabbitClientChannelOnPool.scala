@@ -1,12 +1,17 @@
 package ru.delimobil.cabbit.client
 
+import java.util.concurrent.Executors
+
 import cats.effect.Blocker
 import cats.effect.ContextShift
+import cats.effect.Resource
 import cats.effect.Sync
 import com.rabbitmq.client
 import ru.delimobil.cabbit.algebra.ChannelOnPool
 
-/* Channel instances must not be shared between threads */
+import scala.util.Random
+
+/** @param channel instances must not be shared between threads */
 final class RabbitClientChannelOnPool[F[_]: Sync: ContextShift] private[client] (
   channel: client.Channel,
   blocker: Blocker
@@ -20,4 +25,21 @@ final class RabbitClientChannelOnPool[F[_]: Sync: ContextShift] private[client] 
 
   def isOpen: F[Boolean] =
     blocker.delay(channel.isOpen)
+}
+
+object RabbitClientChannelOnPool {
+
+  def make[F[_]: Sync: ContextShift](channel: client.Channel): Resource[F, RabbitClientChannelOnPool[F]] =
+    Blocker
+      .fromExecutorService(getChannelExecutor)
+      .map(new RabbitClientChannelOnPool(channel, _))
+
+  private def getChannelExecutor[F[_]: Sync] =
+    Sync[F].delay(
+      Executors.newSingleThreadExecutor(runnable => {
+        val thread = new Thread(runnable, s"rabbit-client-channel-${Random.nextInt(1000)}")
+        thread.setDaemon(true)
+        thread
+      })
+    )
 }
