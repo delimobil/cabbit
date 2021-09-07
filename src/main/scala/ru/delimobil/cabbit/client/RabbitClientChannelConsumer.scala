@@ -17,9 +17,6 @@ final class RabbitClientChannelConsumer[F[_]: ConcurrentEffect](
   consumerProvider: RabbitClientConsumerProvider[F],
 ) extends ChannelConsumer[F] {
 
-  def this(channelOnPool: ChannelOnPool[F]) =
-    this(channelOnPool, RabbitClientConsumerProvider.instance[F])
-
   def basicQos(prefetchCount: Int): F[Unit] =
     channelOnPool.delay(_.basicQos(prefetchCount))
 

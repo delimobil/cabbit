@@ -11,10 +11,12 @@ import ru.delimobil.cabbit.algebra.ChannelDeclaration
 import ru.delimobil.cabbit.algebra.ChannelOnPool
 import ru.delimobil.cabbit.algebra.ChannelPublisher
 import ru.delimobil.cabbit.algebra.Connection
+import ru.delimobil.cabbit.client.consumer.RabbitClientConsumerProvider
 
 final class RabbitClientConnection[F[_]: ConcurrentEffect: ContextShift](
   raw: client.Connection,
   blocker: Blocker,
+  consumerProvider: RabbitClientConsumerProvider[F],
 ) extends Connection[F] {
 
   def createChannelDeclaration: Resource[F, ChannelDeclaration[F]] =
@@ -24,10 +26,10 @@ final class RabbitClientConnection[F[_]: ConcurrentEffect: ContextShift](
     createChannelOnPool.map(ch => new RabbitClientChannelPublisher[F](ch))
 
   def createChannelConsumer: Resource[F, ChannelConsumer[F]] =
-    createChannelOnPool.map(ch => new RabbitClientChannelConsumer[F](ch))
+    createChannelOnPool.map(ch => new RabbitClientChannelConsumer[F](ch, consumerProvider))
 
   def createChannel: Resource[F, Channel[F]] =
-    createChannelOnPool.map(ch => new RabbitClientChannel[F](ch))
+    createChannelOnPool.map(ch => new RabbitClientChannel[F](ch, consumerProvider))
 
   def isOpen: F[Boolean] =
     blocker.delay(raw.isOpen)

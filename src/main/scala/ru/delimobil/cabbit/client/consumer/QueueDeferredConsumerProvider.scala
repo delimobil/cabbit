@@ -14,7 +14,7 @@ import com.rabbitmq.client.ShutdownSignalException
 import fs2.Stream
 import fs2.concurrent.Queue
 
-private[consumer] final class QueueDeferredConsumerProvider[F[_]: ConcurrentEffect]
+private[client] final class QueueDeferredConsumerProvider[F[_]: ConcurrentEffect]
   extends RabbitClientConsumerProvider[F] {
 
   def provide(prefetchCount: Int): F[(Consumer, Stream[F, Delivery])] =

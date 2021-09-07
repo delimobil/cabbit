@@ -16,7 +16,7 @@ import fs2.Stream
 import fs2.concurrent.NoneTerminatedQueue
 import fs2.concurrent.Queue
 
-private[consumer] final class QueueNoneTerminatedConsumerProvider[F[_]: ConcurrentEffect]
+private[client] final class QueueNoneTerminatedConsumerProvider[F[_]: ConcurrentEffect]
   extends RabbitClientConsumerProvider[F] {
 
   def provide(prefetchCount: Int): F[(Consumer, Stream[F, Delivery])] =
