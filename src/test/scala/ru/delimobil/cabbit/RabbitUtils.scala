@@ -5,6 +5,7 @@ import java.util.UUID
 import cats.MonadError
 import cats.Parallel
 import cats.effect.ConcurrentEffect
+import cats.effect.Sync
 import cats.effect.Timer
 import cats.effect.syntax.all._
 import cats.syntax.all._
@@ -28,9 +29,9 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
 
   import ru.delimobil.cabbit.algebra.BodyEncoder.instances.textUtf8
 
-  private val utils = new DeclareUtils[F]
-
-  import utils._
+  private val uuidIO: F[UUID] = Sync[F].delay(UUID.randomUUID())
+  private val rndEx: F[ExchangeName] = uuidIO.map(uuid => ExchangeName(uuid.toString))
+  private val rndQu: F[QueueName] = uuidIO.map(uuid => QueueName(uuid.toString))
 
   def readAck(
     tuple: (ConsumerTag, Stream[F, Delivery]),
@@ -53,29 +54,19 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
   def publishOne(exchange: ExchangeName, key: RoutingKey, msg: String): F[Unit] =
     ch.basicPublish(exchange, key, msg, mandatory = MandatoryArgument.Mandatory)
 
-  def declareAcquire(qProps: Arguments): F[(QueueDeclaration, BindDeclaration)] =
-    uuidIO.flatMap { uuid =>
-      val (exchange, queue, bind) = getDirectNonExclusive(uuid, qProps)
-      ch.exchangeDeclare(exchange) *> ch.queueDeclare(queue) *> ch.queueBind(bind).as((queue, bind))
-    }
-
   def declareRelease(bind: BindDeclaration): F[Unit] =
     ch.exchangeDelete(bind.exchangeName) <* ch.queueDelete(bind.queueName)
 
-  def useRandomlyDeclaredIO(qProps: Arguments)(testFunc: (QueueDeclaration, BindDeclaration) => F[Unit]): F[Unit] =
-    declareAcquire(qProps).bracket { case (queue, bind) => testFunc(queue, bind) } (res => declareRelease(res._2))
-
-  def useRandomlyDeclared(qProps: Arguments)(testFunc: (QueueDeclaration, BindDeclaration) => F[Unit]): Unit =
-    useRandomlyDeclaredIO(qProps)(testFunc).toIO.unsafeRunSync()
-
-  private def rndEx: F[ExchangeName] = uuidIO.map(uuid => ExchangeName(uuid.toString))
-
   def bindQueueToExchangeIO(exName: ExchangeName, rk: RoutingKey, qProps: Arguments): F[BindDeclaration] =
-    ch.queueDeclare(QueueDeclaration(QueueNameDefault, arguments = qProps))
-      .flatMap { ok =>
-        val bind = BindDeclaration(QueueName(ok.getQueue), exName, rk)
-        ch.queueBind(bind).as(bind)
-      }
+    for {
+      qName <- rndQu
+      _ <- ch.queueDeclare(getQueue2(qName, qProps))
+      bind = BindDeclaration(qName, exName, rk)
+      _ <- ch.queueBind(bind)
+    } yield bind
+
+  def getQueue2(qName: QueueName, qProps: Arguments): QueueDeclaration =
+    QueueDeclaration(qName, arguments = qProps)
 
   // rndExchange + autonameQueue(props) + FANOUT
   def bindedIO(qProps: Arguments): F[BindDeclaration] =
@@ -87,6 +78,7 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
   def useBinded(qProps: Arguments)(testFunc: BindDeclaration => F[Unit]): Unit =
     bindedIO(qProps).flatMap(testFunc).toIO.unsafeRunSync()
 
+  // Returns QueueName, because queueDeclare(QueueDeclaration) would throw on auto assigned name queues.
   def queueDeclaredIO(qProps: Arguments): F[QueueName] =
     ch.queueDeclare(QueueDeclaration(QueueNameDefault, arguments = qProps)).map(ok => QueueName(ok.getQueue))
 
@@ -105,7 +97,7 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
   def useAlternateExchange(rk: RoutingKey)(testFunc: (ExchangeName, QueueName, QueueName) => F[Unit]): Unit =
     alternateExchangeIO(rk).flatMap(testFunc.tupled).toIO.unsafeRunSync()
 
-  def spoilChannel[Thr <: Throwable](f: Channel[F] => F[Unit])(implicit classTag: ClassTag[Thr]): Unit =
+  def spoilChannel[E <: Throwable](f: Channel[F] => F[Unit])(implicit classTag: ClassTag[E]): Unit =
     conn
       .createChannel
       .use { ch =>
@@ -114,7 +106,7 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
           .flatMap {
             case Left(ex) =>
               ch.isOpen.map { open =>
-                assert(classTag.runtimeClass.isAssignableFrom(ex.getClass), "Thr class is wrong")
+                assert(classTag.runtimeClass.isAssignableFrom(ex.getClass), "E class is wrong")
                 assert(!open)
               }
             case Right(()) =>
@@ -129,20 +121,8 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
     channel1: ChannelDeclaration[F],
     channel2: ChannelDeclaration[F]
   ): F[(Either[Throwable, Queue.DeclareOk], Either[Throwable, Queue.DeclareOk])] =
-    uuidIO
-      .flatMap { uuid =>
-        val queue = getQueue(uuid)
-        (channel1.queueDeclare(queue).attempt, channel2.queueDeclare(queue).attempt).parTupled
-      }
-
-  private def getDirectNonExclusive(
-    uuid: UUID,
-    qProps: Arguments,
-  ): (ExchangeDeclaration, QueueDeclaration, BindDeclaration) = {
-    val exchange = direct(uuid)
-    val queue = getQueue(uuid, qProps)
-    val binding = BindDeclaration(queue.queueName, exchange.exchangeName, RoutingKey("the-key"))
-
-    (exchange, queue, binding)
-  }
+    uuidIO.flatMap { uuid =>
+      val queue = QueueDeclaration(QueueName(uuid.toString))
+      (channel1.queueDeclare(queue).attempt, channel2.queueDeclare(queue).attempt).parTupled
+    }
 }

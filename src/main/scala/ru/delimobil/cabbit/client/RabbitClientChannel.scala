@@ -12,13 +12,20 @@ import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument
 import ru.delimobil.cabbit.algebra._
 import ru.delimobil.cabbit.config.declaration
 
-final class RabbitClientChannel[F[_]: ConcurrentEffect](channelOnPool: ChannelOnPool[F]) extends Channel[F] {
+final class RabbitClientChannel[F[_]: ConcurrentEffect](
+  channelOnPool: ChannelOnPool[F],
+  declarator: ChannelDeclaration[F],
+  consumer: ChannelConsumer[F],
+  publisher: ChannelPublisher[F]
+) extends Channel[F] {
 
-  private val declarator = new RabbitClientChannelDeclaration(channelOnPool)
-
-  private val consumer = new RabbitClientChannelConsumer(channelOnPool, RabbitClientConsumerProvider.instance[F])
-
-  private val publisher = new RabbitClientChannelPublisher(channelOnPool)
+  def this(channelOnPool: ChannelOnPool[F]) =
+    this(
+      channelOnPool,
+      new RabbitClientChannelDeclaration(channelOnPool),
+      new RabbitClientChannelConsumer(channelOnPool),
+      new RabbitClientChannelPublisher(channelOnPool)
+    )
 
   def basicAck(deliveryTag: DeliveryTag, multiple: Boolean): F[Unit] =
     consumer.basicAck(deliveryTag, multiple)

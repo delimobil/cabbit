@@ -3,6 +3,7 @@ package ru.delimobil.cabbit
 import java.io.IOException
 import java.util.UUID
 
+import cats.data.Kleisli
 import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
 import cats.effect.IO
@@ -16,11 +17,13 @@ import cats.syntax.foldable._
 import cats.syntax.functor._
 import cats.syntax.semigroupal._
 import com.rabbitmq.client.AMQP.Queue.DeclareOk
+import com.rabbitmq.client.GetResponse
 import fs2.Stream
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
 import ru.delimobil.cabbit.algebra.ContentEncoding._
 import ru.delimobil.cabbit.algebra._
+import ru.delimobil.cabbit.config.declaration.Arguments
 import ru.delimobil.cabbit.config.declaration.QueueDeclaration
 
 import scala.concurrent.ExecutionContext
@@ -31,6 +34,8 @@ import scala.util.chaining._
 class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
   import ru.delimobil.cabbit.algebra.BodyEncoder.instances.textUtf8
+
+  private type CheckGetFunc = Kleisli[IO, QueueName, GetResponse]
 
   private implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
   private implicit val timer: Timer[IO] = IO.timer(scala.concurrent.ExecutionContext.global)
@@ -132,111 +137,60 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("consumer `basicGet` `autoAck = true`") {
-    val message = "hello from cabbit"
-
-    rabbitUtils.useRandomlyDeclared(Map.empty) {
-      case (queue, bind) =>
-        for {
-          _ <- rabbitUtils.publish(List(message), bind)
-          _ <- sleep
-          response <- channel.basicGet(bind.queueName, autoAck = true)
-          declareOk <- channel.queueDeclare(queue)
-          _ = assert(decodeUtf8(response.getBody) === message)
-          _ = assert(declareOk.getConsumerCount === 0)
-          _ = assert(declareOk.getMessageCount === 0)
-        } yield {}
-      }
+    val io: CheckGetFunc = Kleisli(channel.basicGet(_, autoAck = false))
+    checkGet(msgCount = 0, io)
   }
 
   test("consumer rejects `basicGet`, `requeue = true`") {
-    val message = "hello from cabbit"
-
-    rabbitUtils.useRandomlyDeclared(Map.empty) {
-      case (queue, bind) =>
-        for {
-          _ <- rabbitUtils.publish(List(message), bind)
-          _ <- sleep
-          response <- channel.basicGet(bind.queueName, autoAck = false)
-          _ <- channel.basicReject(DeliveryTag(response.getEnvelope.getDeliveryTag), requeue = true)
-          _ <- sleep
-          declareOk <- channel.queueDeclare(queue)
-          _ = assert(decodeUtf8(response.getBody) === message)
-          _ = assert(declareOk.getConsumerCount === 0)
-          _ = assert(declareOk.getMessageCount === 1)
-        } yield {}
+    val io: CheckGetFunc = Kleisli(
+      channel.basicGet(_, autoAck = false).flatTap { r =>
+        channel.basicReject(DeliveryTag(r.getEnvelope.getDeliveryTag), requeue = true)
       }
+    )
+    checkGet(msgCount = 1, io)
   }
 
   test("consumer rejects `basicGet` `requeue = false`") {
-    val message = "hello from cabbit"
-
-    rabbitUtils.useRandomlyDeclared(Map.empty) {
-      case (queue, bind) =>
-        for {
-          _ <- rabbitUtils.publish(List(message), bind)
-          _ <- sleep
-          response <- channel.basicGet(bind.queueName, autoAck = false)
-          _ <- channel.basicReject(DeliveryTag(response.getEnvelope.getDeliveryTag), requeue = false)
-          _ <- sleep
-          declareOk <- channel.queueDeclare(queue)
-          _ = assert(decodeUtf8(response.getBody) === message)
-          _ = assert(declareOk.getConsumerCount === 0)
-          _ = assert(declareOk.getMessageCount === 0)
-        } yield {}
+    val io: CheckGetFunc = Kleisli(
+      channel.basicGet(_, autoAck = false).flatTap { r =>
+        channel.basicReject(DeliveryTag(r.getEnvelope.getDeliveryTag), requeue = false)
       }
+    )
+    checkGet(msgCount = 0, io)
   }
 
   test("consumer consumes, on start only prefetched messages are withdrawed") {
     val maxMessages = 100
     val prefetched = 51
     val messages = List.fill(maxMessages)(Random.nextString(Random.nextInt(100)))
+    val qProps: Arguments = Map.empty
 
-    rabbitUtils.useRandomlyDeclared(Map.empty) {
-      case (queue, bind) =>
-        for {
-          _ <- rabbitUtils.publish(messages, bind)
-          stream <- channel.deliveryStream(bind.queueName, prefetched)
-          _ <- sleep
-          declareOk <- channel.queueDeclare(queue)
-          bodies <- rabbitUtils.readAck(stream)
-          _ = assert(declareOk.getConsumerCount == 1)
-          _ = assert(declareOk.getMessageCount == (maxMessages - prefetched))
-          _ = assert(messages == bodies)
-        } yield {}
-      }
+    rabbitUtils.useBinded(qProps) { bind =>
+      for {
+        _ <- messages.traverse_(channel.basicPublishFanout(bind.exchangeName, _))
+        stream <- channel.deliveryStream(bind.queueName, prefetched)
+        _ <- sleep
+        declareOk <- channel.queueDeclare(rabbitUtils.getQueue2(bind.queueName, qProps))
+        bodies <- rabbitUtils.readAck(stream)
+        _ = assert(declareOk.getConsumerCount == 1)
+        _ = assert(declareOk.getMessageCount == (maxMessages - prefetched))
+        _ = assert(messages == bodies)
+      } yield {}
+    }
   }
 
-  ignore("consumer completes on cancel, msg gets requeued") {
-    val messages = (1 to 2).map(i => s"hello from cabbit-$i").toList
-
-    rabbitUtils.useRandomlyDeclared(Map.empty) {
-      case (queue, bind) =>
-        for {
-          _ <- rabbitUtils.publish(messages, bind)
-          (tag, stream) <- channel.deliveryStream(bind.queueName, 1)
-          _ <- channel.basicCancel(tag)
-          _ <- sleep
-          deliveriesEither <- IO.race(stream.compile.toList, IO.sleep(300.millis))
-          declareOk2 <- channel.queueDeclare(queue)
-          _ = assert(deliveriesEither.isLeft)
-          _ = assert(declareOk2.getMessageCount == 2)
-        } yield {}
-      }
-  }
+  ignore("consumer completes on cancel, msg gets requeued") { }
 
   test("Stream completes on queue removal") {
-    rabbitUtils.declareAcquire(Map.empty)
-      .flatMap {
-        case (_, bind) =>
-          for {
-            (_, stream) <- channel.deliveryStream(bind.queueName, 1)
-            _ <- rabbitUtils.declareRelease(bind)
-            _ <- sleep
-            deliveriesEither <- IO.race(stream.compile.toList, IO.sleep(300.millis))
-            _ = assert(deliveriesEither.isLeft)
-          } yield {}
-      }
-      .unsafeRunSync()
+    rabbitUtils.useQueueDeclared(Map.empty) { qName =>
+      for {
+        (_, stream) <- channel.deliveryStream(qName, 1)
+        _ <- channel.queueDelete(qName)
+        _ <- sleep
+        deliveriesEither <- IO.race(stream.compile.toList, IO.sleep(300.millis))
+        _ = assert(deliveriesEither.isLeft)
+      } yield {}
+    }
   }
 
   test("two exclusive queues on one connection should work") {
@@ -268,25 +222,19 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("ten thousand requeues") {
-    val message = "hello from cabbit"
+    val messages = List.fill(10)("hello from cabbit")
     val amount = 10_000
-    rabbitUtils.useRandomlyDeclared(Map.empty) {
-      case (_, bind) =>
-        channel
-          .deliveryStream(bind.queueName, prefetchCount = 100)
-          .productL(rabbitUtils.publish(List.fill(10)(message), bind))
-          .map { case (_, stream) =>
-            stream
-              .take(amount)
-              .evalTap { delivery =>
-                val tag = DeliveryTag(delivery.getEnvelope.getDeliveryTag)
-                channel.basicReject(tag, requeue = true)
-              }
-          }
-          .pipe(Stream.force)
-          .compile
-          .toList
-          .map(list => assert(list.length == amount))
+    rabbitUtils.useQueueDeclared(Map.empty) { qName =>
+      channel
+        .deliveryStream(qName, prefetchCount = 100)
+        .productL(messages.traverse_(channel.basicPublishDirect(qName, _)))
+        .map { case (_, stream) =>
+          stream
+            .take(amount)
+            .evalTap(delivery => channel.basicReject(DeliveryTag(delivery.getEnvelope.getDeliveryTag), requeue = true))
+        }
+        .pipe(Stream.force(_).compile.toList)
+        .map(list => assert(list.length == amount))
     }
   }
 
@@ -394,5 +342,22 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         .unsafeRunSync()
 
     (openDuringUse, openAfterUse)
+  }
+
+  private def checkGet(msgCount: Int, io: CheckGetFunc): Unit = {
+    val message = "hello from cabbit"
+
+    val qProps: Arguments = Map.empty
+    rabbitUtils.useBinded(qProps) { bind =>
+      for {
+        _ <- channel.basicPublishFanout(bind.exchangeName, message)
+        response <- io.run(bind.queueName)
+        _ <- sleep
+        declareOk <- channel.queueDeclare(rabbitUtils.getQueue2(bind.queueName, qProps))
+        _ = assert(decodeUtf8(response.getBody) === message)
+        _ = assert(declareOk.getConsumerCount === 0)
+        _ = assert(declareOk.getMessageCount === msgCount)
+      } yield {}
+    }
   }
 }

@@ -10,11 +10,15 @@ import ru.delimobil.cabbit.algebra.ChannelOnPool
 import ru.delimobil.cabbit.algebra.ConsumerTag
 import ru.delimobil.cabbit.algebra.DeliveryTag
 import ru.delimobil.cabbit.algebra.QueueName
+import ru.delimobil.cabbit.client.consumer.RabbitClientConsumerProvider
 
 final class RabbitClientChannelConsumer[F[_]: ConcurrentEffect](
   channelOnPool: ChannelOnPool[F],
   consumerProvider: RabbitClientConsumerProvider[F],
 ) extends ChannelConsumer[F] {
+
+  def this(channelOnPool: ChannelOnPool[F]) =
+    this(channelOnPool, RabbitClientConsumerProvider.instance[F])
 
   def basicQos(prefetchCount: Int): F[Unit] =
     channelOnPool.delay(_.basicQos(prefetchCount))

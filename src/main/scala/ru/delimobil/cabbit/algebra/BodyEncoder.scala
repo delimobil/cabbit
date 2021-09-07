@@ -20,7 +20,11 @@ object BodyEncoder {
     def contentEncoding: ContentEncoding
 
     final def alterProps(props: BasicProperties): BasicProperties =
-      props.builder().contentType(contentType.raw).contentEncoding(contentType.raw).build()
+      props
+        .builder()
+        .contentType(Option(props.getContentType).filter(_.nonEmpty).getOrElse(contentType.raw))
+        .contentEncoding(Option(props.getContentEncoding).filter(_.nonEmpty).getOrElse(contentEncoding.raw))
+        .build()
   }
 
   object instances {

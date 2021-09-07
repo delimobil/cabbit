@@ -24,7 +24,7 @@ final class RabbitClientConnection[F[_]: ConcurrentEffect: ContextShift](
     createChannelOnPool.map(ch => new RabbitClientChannelPublisher[F](ch))
 
   def createChannelConsumer: Resource[F, ChannelConsumer[F]] =
-    createChannelOnPool.map(ch => new RabbitClientChannelConsumer[F](ch, RabbitClientConsumerProvider.instance[F]))
+    createChannelOnPool.map(ch => new RabbitClientChannelConsumer[F](ch))
 
   def createChannel: Resource[F, Channel[F]] =
     createChannelOnPool.map(ch => new RabbitClientChannel[F](ch))
