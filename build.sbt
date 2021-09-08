@@ -7,7 +7,7 @@ val fs2Version = "2.5.9"
 val root = (project in file("."))
   .settings(
     name := "cabbit",
-    version := "0.0.10-SNAPSHOT",
+    version := "0.0.11.1-SNAPSHOT",
     scalacOptions ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>

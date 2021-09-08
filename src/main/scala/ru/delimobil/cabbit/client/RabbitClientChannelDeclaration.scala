@@ -45,6 +45,7 @@ final class RabbitClientChannelDeclaration[F[_]: Functor](
         bindDeclaration.queueName.name,
         bindDeclaration.exchangeName.name,
         bindDeclaration.routingKey.name,
+        bindDeclaration.arguments.asJava,
       )
     }.void
 
