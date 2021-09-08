@@ -17,7 +17,7 @@ import fs2.concurrent.NoneTerminatedQueue
 import fs2.concurrent.Queue
 
 private[client] final class QueueNoneTerminatedConsumerProvider[F[_]: ConcurrentEffect]
-  extends RabbitClientConsumerProvider[F] {
+    extends RabbitClientConsumerProvider[F] {
 
   def provide(prefetchCount: Int): F[(Consumer, Stream[F, Delivery])] =
     Queue
@@ -47,7 +47,7 @@ private[client] final class QueueNoneTerminatedConsumerProvider[F[_]: Concurrent
         consumerTag: String,
         envelope: Envelope,
         properties: AMQP.BasicProperties,
-        body: Array[Byte]
+        body: Array[Byte],
       ): Unit = deliver.handle(consumerTag, new Delivery(envelope, properties, body))
     }
   }

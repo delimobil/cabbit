@@ -1,14 +1,13 @@
 package ru.delimobil.cabbit.client
 
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-
 import cats.effect.Blocker
 import cats.effect.ContextShift
 import cats.effect.Resource
 import cats.effect.Sync
 import com.rabbitmq.client
 import ru.delimobil.cabbit.algebra.ChannelOnPool
-
 import scala.util.Random
 
 /** @param channel instances must not be shared between threads */
@@ -34,12 +33,12 @@ object RabbitClientChannelOnPool {
       .fromExecutorService(getChannelExecutor)
       .map(new RabbitClientChannelOnPool(channel, _))
 
-  private def getChannelExecutor[F[_]: Sync] =
-    Sync[F].delay(
+  private def getChannelExecutor[F[_]: Sync]: F[ExecutorService] =
+    Sync[F].delay {
       Executors.newSingleThreadExecutor(runnable => {
         val thread = new Thread(runnable, s"rabbit-client-channel-${Random.nextInt(1000)}")
         thread.setDaemon(true)
         thread
       })
-    )
+    }
 }
