@@ -23,7 +23,7 @@ final class RabbitClientChannelDeclaration[F[_]: Functor](
         queueDeclaration.durable.bool,
         queueDeclaration.exclusive.bool,
         queueDeclaration.autoDelete.bool,
-        queueDeclaration.arguments.asJava,
+        queueDeclaration.arguments.asJava, // .asInstanceOf[java.util.Map[String, Object]],
       )
     }
 
@@ -35,7 +35,7 @@ final class RabbitClientChannelDeclaration[F[_]: Functor](
         exchangeDeclaration.durable.bool,
         exchangeDeclaration.autoDelete.bool,
         exchangeDeclaration.internal.bool,
-        exchangeDeclaration.arguments.asJava,
+        exchangeDeclaration.arguments.asJava, //.asInstanceOf[java.util.Map[String, Object]],
       )
     }
 
@@ -45,7 +45,7 @@ final class RabbitClientChannelDeclaration[F[_]: Functor](
         bindDeclaration.queueName.name,
         bindDeclaration.exchangeName.name,
         bindDeclaration.routingKey.name,
-        bindDeclaration.arguments.asJava,
+        bindDeclaration.arguments.asJava, // .asInstanceOf[java.util.Map[String, Object]],
       )
     }.void
 

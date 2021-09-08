@@ -1,8 +1,9 @@
 ThisBuild / scalaVersion := "2.13.6"
 ThisBuild / organization := "ru.delimobil"
-ThisBuild / crossScalaVersions ++= Seq("2.13.6", "3.0.2")
+ThisBuild / crossScalaVersions ++= Seq("2.13.6", "3.0.2", "2.12.14")
 
 val fs2Version = "2.5.9"
+val circeVersion = "0.14.1"
 
 val root = (project in file("."))
   .settings(
@@ -13,15 +14,13 @@ val root = (project in file("."))
         case Some((3, _)) =>
           Seq("-source:3.0-migration")
         case _ =>
-          Seq(
-            "-deprecation",
-            "-Xfatal-warnings",
-            "-Wunused:imports,privates,locals",
-          )
+          Seq("-deprecation", "-Xfatal-warnings")
       }
     },
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, 12)) =>
+          List("org.scala-lang.modules" %% "scala-collection-compat" % "2.5.0")
         case Some((2, _)) =>
           List(compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"))
         case _ =>
@@ -33,8 +32,8 @@ val root = (project in file("."))
       "co.fs2" %% "fs2-io" % fs2Version % Test,
       "org.typelevel" %% "cats-effect" % "2.5.3",
       "org.scalatest" %% "scalatest" % "3.2.9" % Test,
-      "io.circe" %% "circe-core" % "0.14.1",
-      "io.circe" %% "circe-parser" % "0.14.1" % Test,
+      "io.circe" %% "circe-core" % circeVersion,
+      "io.circe" %% "circe-parser" % circeVersion % Test,
       "com.rabbitmq" % "amqp-client" % "5.13.1",
       "com.dimafeng" %% "testcontainers-scala-rabbitmq" % "0.39.7" % Test,
       "org.slf4j" % "slf4j-simple" % "1.7.32" % Test,

@@ -223,7 +223,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
   test("ten thousand requeues") {
     val messages = List.fill(10)("hello from cabbit")
-    val amount: Long = 10_000
+    val amount: Long = 10000
     rabbitUtils.useQueueDeclared(Map.empty) { qName =>
       channel
         .deliveryStream(qName, prefetchCount = 100)
@@ -243,8 +243,8 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     val messages = (1 to 10).map(i => s"hello from cabbit-$i").toList
 
     rabbitUtils.useBinded(Map.empty) { deadLetterBind =>
-      val args: Map[String, Any] =
-        Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name, "x-max-length" -> 7)
+      val args: Map[String, AnyRef] =
+        Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name, "x-max-length" -> Integer.valueOf(7))
       rabbitUtils
         .bindedIO(args)
         .flatTap(bind => messages.traverse_(msg => channel.basicPublishFanout(bind.exchangeName, msg)))
@@ -318,8 +318,8 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     val ttl = 150
 
     rabbitUtils.useBinded(Map.empty) { deadLetterBind =>
-      val args: Map[String, Any] =
-        Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name, "x-message-ttl" -> ttl)
+      val args: Map[String, AnyRef] =
+        Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name, "x-message-ttl" -> Integer.valueOf(ttl))
       for {
         bind <- rabbitUtils.bindedIO(args)
         _ <- channel.basicPublishFanout(bind.exchangeName, message)
