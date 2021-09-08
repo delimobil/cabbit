@@ -25,10 +25,10 @@ final class RabbitClientChannelConsumer[F[_]: ConcurrentEffect](
     deliverCallback: client.DeliverCallback,
     cancelCallback: client.CancelCallback,
   ): F[ConsumerTag] =
-    channelOnPool.delay(_.basicConsume(queue.name, deliverCallback, cancelCallback)).map(ConsumerTag)
+    channelOnPool.delay(_.basicConsume(queue.name, deliverCallback, cancelCallback)).map(ConsumerTag(_))
 
   def basicConsume(queue: QueueName, consumer: client.Consumer): F[ConsumerTag] =
-    channelOnPool.delay(_.basicConsume(queue.name, consumer)).map(ConsumerTag)
+    channelOnPool.delay(_.basicConsume(queue.name, consumer)).map(ConsumerTag(_))
 
   def basicGet(queue: QueueName, autoAck: Boolean): F[client.GetResponse] =
     channelOnPool.delay(_.basicGet(queue.name, autoAck))
@@ -39,7 +39,8 @@ final class RabbitClientChannelConsumer[F[_]: ConcurrentEffect](
   ): F[(ConsumerTag, Stream[F, client.Delivery])] =
     for {
       _ <- basicQos(prefetchCount)
-      (consumer, stream) <- consumerProvider.provide(prefetchCount)
+      res <- consumerProvider.provide(prefetchCount)
+      (consumer, stream) = res
       tag <- basicConsume(queueName, consumer)
     } yield (tag, stream)
 

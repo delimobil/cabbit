@@ -2,7 +2,6 @@ package ru.delimobil.cabbit.client
 
 import cats.effect.ConcurrentEffect
 import com.rabbitmq.client.AMQP.BasicProperties
-import com.rabbitmq.client.AMQP
 import com.rabbitmq.client.AMQP.Exchange
 import com.rabbitmq.client.AMQP.Queue
 import com.rabbitmq.client.CancelCallback

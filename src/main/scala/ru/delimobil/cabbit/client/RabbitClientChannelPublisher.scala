@@ -2,6 +2,8 @@ package ru.delimobil.cabbit.client
 
 import com.rabbitmq.client.AMQP.BasicProperties
 import ru.delimobil.cabbit.algebra._
+import ru.delimobil.cabbit.algebra.defaults.ExchangeNameDefault
+import ru.delimobil.cabbit.algebra.defaults.RoutingKeyDefault
 import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument
 
 final class RabbitClientChannelPublisher[F[_]](

@@ -1,7 +1,6 @@
 package ru.delimobil.cabbit
 
 import java.util.UUID
-
 import cats.MonadError
 import cats.Parallel
 import cats.effect.ConcurrentEffect
@@ -16,11 +15,12 @@ import fs2.Stream
 import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument
 import ru.delimobil.cabbit.algebra.ContentEncoding.decodeUtf8
 import ru.delimobil.cabbit.algebra._
+import ru.delimobil.cabbit.algebra.defaults.RoutingKeyDefault
+import ru.delimobil.cabbit.algebra.defaults.QueueNameDefault
 import ru.delimobil.cabbit.config.declaration.Arguments
 import ru.delimobil.cabbit.config.declaration.BindDeclaration
 import ru.delimobil.cabbit.config.declaration.ExchangeDeclaration
 import ru.delimobil.cabbit.config.declaration.QueueDeclaration
-
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
@@ -35,10 +35,9 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
 
   def readAck(
     tuple: (ConsumerTag, Stream[F, Delivery]),
-    timeout: FiniteDuration = 100.millis
+    timeout: FiniteDuration = 100.millis,
   ): F[List[String]] =
-    tuple
-      ._2
+    tuple._2
       .evalTap(d => ch.basicAck(DeliveryTag(d.getEnvelope.getDeliveryTag), multiple = false))
       .concurrently(Stream.eval_(Timer[F].sleep(timeout) *> ch.basicCancel(tuple._1)))
       .compile
@@ -98,11 +97,9 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
     alternateExchangeIO(rk).flatMap(testFunc.tupled).toIO.unsafeRunSync()
 
   def spoilChannel[E <: Throwable](f: Channel[F] => F[Unit])(implicit classTag: ClassTag[E]): Unit =
-    conn
-      .createChannel
+    conn.createChannel
       .use { ch =>
-        f(ch)
-          .attempt
+        f(ch).attempt
           .flatMap {
             case Left(ex) =>
               ch.isOpen.map { open =>
@@ -119,7 +116,7 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
 
   def declareExclusive(
     channel1: ChannelDeclaration[F],
-    channel2: ChannelDeclaration[F]
+    channel2: ChannelDeclaration[F],
   ): F[(Either[Throwable, Queue.DeclareOk], Either[Throwable, Queue.DeclareOk])] =
     uuidIO.flatMap { uuid =>
       val queue = QueueDeclaration(QueueName(uuid.toString))

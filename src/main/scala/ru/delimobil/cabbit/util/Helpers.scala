@@ -22,7 +22,7 @@ object Helpers {
   ): Resource[F, ChannelConsumer[F]] = {
     val rabbitFactory = ConnectionFactoryProvider.provide[F](amqpConfig.toCabbitConfig)
     for {
-      connection <- rabbitFactory.newConnection
+      connection <- rabbitFactory.newConnection(None)
       _ <- Resource.eval(
         connection.createChannelDeclaration.use { channel =>
           for {
@@ -43,7 +43,7 @@ object Helpers {
   ): Resource[F, ChannelPublisher[F]] = {
     val rabbitFactory = ConnectionFactoryProvider.provide[F](amqpConfig.toCabbitConfig)
     for {
-      connection <- rabbitFactory.newConnection
+      connection <- rabbitFactory.newConnection(None)
       _ <- Resource.eval(
         connection.createChannelDeclaration.use { channel =>
           for {

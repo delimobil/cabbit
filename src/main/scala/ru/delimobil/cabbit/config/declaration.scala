@@ -2,6 +2,7 @@ package ru.delimobil.cabbit.config
 
 import com.rabbitmq.client.BuiltinExchangeType
 import ru.delimobil.cabbit.algebra._
+import ru.delimobil.cabbit.algebra.defaults.ExchangeNameDefault
 
 object declaration {
 

@@ -1,7 +1,7 @@
 package ru.delimobil.cabbit.client
 
+import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
-
 import cats.effect.Blocker
 import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
@@ -44,12 +44,12 @@ final class RabbitClientConnectionFactory[F[_]: ConcurrentEffect: ContextShift](
       .product(Blocker.fromExecutorService(getChannelExecutor))
       .map { case (connection, blocker) => new RabbitClientConnection[F](connection, blocker, consumerProvider) }
 
-  private def getChannelExecutor =
+  private def getChannelExecutor: F[ExecutorService] =
     Sync[F].delay(
       Executors.newSingleThreadExecutor(runnable => {
         val thread = new Thread(runnable, s"rabbit-client-connection-${Random.nextInt(1000)}")
         thread.setDaemon(true)
         thread
-      })
+      }),
     )
 }

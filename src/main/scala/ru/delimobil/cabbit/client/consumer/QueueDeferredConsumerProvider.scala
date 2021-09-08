@@ -15,7 +15,7 @@ import fs2.Stream
 import fs2.concurrent.Queue
 
 private[client] final class QueueDeferredConsumerProvider[F[_]: ConcurrentEffect]
-  extends RabbitClientConsumerProvider[F] {
+    extends RabbitClientConsumerProvider[F] {
 
   def provide(prefetchCount: Int): F[(Consumer, Stream[F, Delivery])] =
     Queue
@@ -28,14 +28,20 @@ private[client] final class QueueDeferredConsumerProvider[F[_]: ConcurrentEffect
 
       def handleConsumeOk(consumerTag: String): Unit = {}
 
-      def handleCancelOk(consumerTag: String): Unit =
+      def handleCancelOk(consumerTag: String): Unit = {
         deferred.complete(().asRight)
+        ()
+      }
 
-      def handleCancel(consumerTag: String): Unit =
+      def handleCancel(consumerTag: String): Unit = {
         deferred.complete(().asRight)
+        ()
+      }
 
-      def handleShutdownSignal(consumerTag: String, sig: ShutdownSignalException): Unit =
+      def handleShutdownSignal(consumerTag: String, sig: ShutdownSignalException): Unit = {
         deferred.complete(sig.asLeft)
+        ()
+      }
 
       def handleRecoverOk(consumerTag: String): Unit = {}
 
@@ -43,7 +49,7 @@ private[client] final class QueueDeferredConsumerProvider[F[_]: ConcurrentEffect
         consumerTag: String,
         envelope: Envelope,
         properties: AMQP.BasicProperties,
-        body: Array[Byte]
+        body: Array[Byte],
       ): Unit = queue.enqueue1(new Delivery(envelope, properties, body)).toIO.unsafeRunSync()
     }
 }

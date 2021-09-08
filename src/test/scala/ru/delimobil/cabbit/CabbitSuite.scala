@@ -42,12 +42,12 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   private val rndQueue = IO.delay(QueueName(UUID.randomUUID().toString))
 
   private var container: RabbitContainer = _
-  private var connection: Connection[IO] = _
+//  private var connection: Connection[IO] = _
   private var channel: Channel[IO] = _
   private var rabbitUtils: RabbitUtils[IO] = _
   private var closeIO: IO[Unit] = _
 
-  private def messagesN(n: Int) = (1 to n).map(i => s"hello from cabbit-$i").toList
+  private def messagesN(n: Int): List[String] = (1 to n).map(i => s"hello from cabbit-$i").toList
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
@@ -59,7 +59,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
       .flatTap { case (((cont, conn), ch), closeAction) =>
         IO.delay {
           container = cont
-          connection = conn
+//          connection = conn
           channel = ch
           rabbitUtils = new RabbitUtils[IO](conn, ch)
           closeIO = closeAction
@@ -222,7 +222,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
   test("ten thousand requeues") {
     val messages = List.fill(10)("hello from cabbit")
-    val amount = 10_000
+    val amount: Long = 10_000
     rabbitUtils.useQueueDeclared(Map.empty) { qName =>
       channel
         .deliveryStream(qName, prefetchCount = 100)
@@ -234,6 +234,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         }
         .pipe(Stream.force(_).compile.toList)
         .map(list => assert(list.length == amount))
+        .void
     }
   }
 
@@ -241,7 +242,8 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     val messages = (1 to 10).map(i => s"hello from cabbit-$i").toList
 
     rabbitUtils.useBinded(Map.empty) { deadLetterBind =>
-      val args = Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name, "x-max-length" -> 7)
+      val args: Map[String, Any] =
+        Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name, "x-max-length" -> 7)
       rabbitUtils
         .bindedIO(args)
         .flatTap(bind => messages.traverse_(msg => channel.basicPublishFanout(bind.exchangeName, msg)))
@@ -252,6 +254,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
           assert(left == deadDeliveries)
           assert(right == deliveries)
         }
+        .void
     }
   }
 
@@ -273,6 +276,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
           assert(routed == List(routedMessage))
           assert(nonRouted == List(nonRoutedMessage))
         }
+        .void
     }
   }
 
@@ -313,7 +317,8 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     val ttl = 150
 
     rabbitUtils.useBinded(Map.empty) { deadLetterBind =>
-      val args = Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name, "x-message-ttl" -> ttl)
+      val args: Map[String, Any] =
+        Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name, "x-message-ttl" -> ttl)
       for {
         bind <- rabbitUtils.bindedIO(args)
         _ <- channel.basicPublishFanout(bind.exchangeName, message)
