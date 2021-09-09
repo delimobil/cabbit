@@ -13,6 +13,8 @@ package object algebra {
   // act as the default exchange for content Publish methods and for default queue bindings
   val ExchangeNameDefault: ExchangeName = ExchangeName("")
 
+  val ExchangeNameTopic: ExchangeName = ExchangeName("amq.topic")
+
   final case class RoutingKey(name: String) extends AnyVal
 
   // Is used for FANOUT exchanges

@@ -142,20 +142,20 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("consumer rejects `basicGet`, `requeue = true`") {
-    val io: CheckGetFunc = Kleisli(
-      channel.basicGet(_, autoAck = false).flatTap { r =>
+    val io: CheckGetFunc = Kleisli { qName =>
+      channel.basicGet(qName, autoAck = false).flatTap { r =>
         channel.basicReject(DeliveryTag(r.getEnvelope.getDeliveryTag), requeue = true)
       }
-    )
+    }
     checkGet(msgCount = 1, io)
   }
 
   test("consumer rejects `basicGet` `requeue = false`") {
-    val io: CheckGetFunc = Kleisli(
-      channel.basicGet(_, autoAck = false).flatTap { r =>
+    val io: CheckGetFunc = Kleisli { qName =>
+      channel.basicGet(qName, autoAck = false).flatTap { r =>
         channel.basicReject(DeliveryTag(r.getEnvelope.getDeliveryTag), requeue = false)
       }
-    )
+    }
     checkGet(msgCount = 0, io)
   }
 
@@ -170,7 +170,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         _ <- messages.traverse_(channel.basicPublishFanout(bind.exchangeName, _))
         stream <- channel.deliveryStream(bind.queueName, prefetched)
         _ <- sleep
-        declareOk <- channel.queueDeclare(rabbitUtils.getQueue2(bind.queueName, qProps))
+        declareOk <- channel.queueDeclare(rabbitUtils.getQueue(bind.queueName, qProps))
         bodies <- rabbitUtils.readAck(stream)
         _ = assert(declareOk.getConsumerCount == 1)
         _ = assert(declareOk.getMessageCount == (maxMessages - prefetched))
@@ -222,19 +222,23 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("ten thousand requeues") {
-    val messages = List.fill(10)("hello from cabbit")
+    val messages = (1 to 100).map(i => s"hello from cabbit-$i").toList
+    val expected = List.fill(200)(messages.take(50)).flatten
     val amount = 10_000
+
     rabbitUtils.useQueueDeclared(Map.empty) { qName =>
-      channel
-        .deliveryStream(qName, prefetchCount = 100)
-        .productL(messages.traverse_(channel.basicPublishDirect(qName, _)))
+      messages
+        .traverse_(channel.basicPublishDirect(qName, _))
+        .productR(channel.deliveryStream(qName, prefetchCount = 50))
         .map { case (_, stream) =>
           stream
             .take(amount)
             .evalTap(delivery => channel.basicReject(DeliveryTag(delivery.getEnvelope.getDeliveryTag), requeue = true))
         }
         .pipe(Stream.force(_).compile.toList)
-        .map(list => assert(list.length == amount))
+        .map { list =>
+          assert(list.map(d => decodeUtf8(d.getBody)) == expected)
+        }
     }
   }
 
@@ -353,7 +357,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         _ <- channel.basicPublishFanout(bind.exchangeName, message)
         response <- io.run(bind.queueName)
         _ <- sleep
-        declareOk <- channel.queueDeclare(rabbitUtils.getQueue2(bind.queueName, qProps))
+        declareOk <- channel.queueDeclare(rabbitUtils.getQueue(bind.queueName, qProps))
         _ = assert(decodeUtf8(response.getBody) === message)
         _ = assert(declareOk.getConsumerCount === 0)
         _ = assert(declareOk.getMessageCount === msgCount)

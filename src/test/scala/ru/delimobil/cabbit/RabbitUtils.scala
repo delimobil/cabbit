@@ -13,7 +13,6 @@ import com.rabbitmq.client.AMQP.Queue
 import com.rabbitmq.client.BuiltinExchangeType
 import com.rabbitmq.client.Delivery
 import fs2.Stream
-import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument
 import ru.delimobil.cabbit.algebra.ContentEncoding.decodeUtf8
 import ru.delimobil.cabbit.algebra._
 import ru.delimobil.cabbit.config.declaration.Arguments
@@ -21,13 +20,10 @@ import ru.delimobil.cabbit.config.declaration.BindDeclaration
 import ru.delimobil.cabbit.config.declaration.ExchangeDeclaration
 import ru.delimobil.cabbit.config.declaration.QueueDeclaration
 
-import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
 
 final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connection[F], ch: Channel[F]) {
-
-  import ru.delimobil.cabbit.algebra.BodyEncoder.instances.textUtf8
 
   private val uuidIO: F[UUID] = Sync[F].delay(UUID.randomUUID())
   private val rndEx: F[ExchangeName] = uuidIO.map(uuid => ExchangeName(uuid.toString))
@@ -35,37 +31,28 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
 
   def readAck(
     tuple: (ConsumerTag, Stream[F, Delivery]),
-    timeout: FiniteDuration = 100.millis
+    halt: F[Unit] = Timer[F].sleep(150.millis)
   ): F[List[String]] =
     tuple
       ._2
       .evalTap(d => ch.basicAck(DeliveryTag(d.getEnvelope.getDeliveryTag), multiple = false))
-      .concurrently(Stream.eval_(Timer[F].sleep(timeout) *> ch.basicCancel(tuple._1)))
+      .concurrently(Stream.eval_(halt *> ch.basicCancel(tuple._1)))
       .compile
       .toList
       .map(_.map(d => decodeUtf8(d.getBody)))
 
-  def readAll(queue: QueueName, timeout: FiniteDuration = 100.millis): F[List[String]] =
-    ch.deliveryStream(queue, 100).flatMap(readAck(_, timeout))
-
-  def publish(messages: List[String], bind: BindDeclaration): F[Unit] =
-    messages.traverse_(publishOne(bind.exchangeName, bind.routingKey, _))
-
-  def publishOne(exchange: ExchangeName, key: RoutingKey, msg: String): F[Unit] =
-    ch.basicPublish(exchange, key, msg, mandatory = MandatoryArgument.Mandatory)
-
-  def declareRelease(bind: BindDeclaration): F[Unit] =
-    ch.exchangeDelete(bind.exchangeName) <* ch.queueDelete(bind.queueName)
+  def readAll(queue: QueueName, halt: F[Unit] = Timer[F].sleep(150.millis)): F[List[String]] =
+    ch.deliveryStream(queue, 100).flatMap(readAck(_, halt))
 
   def bindQueueToExchangeIO(exName: ExchangeName, rk: RoutingKey, qProps: Arguments): F[BindDeclaration] =
     for {
       qName <- rndQu
-      _ <- ch.queueDeclare(getQueue2(qName, qProps))
+      _ <- ch.queueDeclare(getQueue(qName, qProps))
       bind = BindDeclaration(qName, exName, rk)
       _ <- ch.queueBind(bind)
     } yield bind
 
-  def getQueue2(qName: QueueName, qProps: Arguments): QueueDeclaration =
+  def getQueue(qName: QueueName, qProps: Arguments): QueueDeclaration =
     QueueDeclaration(qName, arguments = qProps)
 
   // rndExchange + autonameQueue(props) + FANOUT
