@@ -40,7 +40,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   private implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
   private implicit val timer: Timer[IO] = IO.timer(scala.concurrent.ExecutionContext.global)
 
-  private val sleep = timer.sleep(50.millis)
+  private val sleep = timer.sleep(100.millis)
   private val rndQueue = IO.delay(QueueName(UUID.randomUUID().toString))
 
   private var container: RabbitContainer = _
@@ -260,7 +260,21 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     }
   }
 
-  ignore("dead-letter & remove the queue") { }
+  test("dead-letter & remove the queue") {
+    val messages = (1 to 10).map(i => s"hello from cabbit-$i").toList
+
+    rabbitUtils.useBinded(Map.empty) { deadLetterBind =>
+      val args = Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name)
+      rabbitUtils
+        .bindedIO(args)
+        .flatTap(bind => messages.traverse_(msg => channel.basicPublishFanout(bind.exchangeName, msg)))
+        .productL(sleep)
+        .flatTap(bind => channel.queueDelete(bind.queueName))
+        .productL(sleep)
+        .productR(rabbitUtils.readAll(deadLetterBind.queueName))
+        .map(deadDeliveries => assert(deadDeliveries.isEmpty))
+    }
+  }
 
   test("alternate-exchange") {
     val routingKey = RoutingKey("valid.#")
