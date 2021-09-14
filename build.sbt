@@ -23,5 +23,10 @@ val root = (project in file("."))
     publishTo := sonatypePublishToBundle.value,
     ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org",
     sonatypeRepository := "https://s01.oss.sonatype.org/service/local",
-    licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt"))
+    licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
+    homepage := Some(url("https://github.com/delimobil/cabbit")),
+    scmInfo := Some(ScmInfo(url("https://github.com/delimobil/cabbit"), "scm:git@github.com/delimobil/cabbit.git")),
+    developers := List(
+      Developer(id="nikiforo", name="Artem Nikiforov", email="anikiforov@delimobil.ru", url=url("https://github.com/nikiforo")),
+    )
   )
