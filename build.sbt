@@ -8,7 +8,7 @@ val circeVersion = "0.14.1"
 val root = (project in file("."))
   .settings(
     name := "cabbit",
-    version := "0.0.11.1-SNAPSHOT",
+    version := "0.0.13.1-SNAPSHOT",
     scalacOptions ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>
@@ -37,5 +37,21 @@ val root = (project in file("."))
       "com.rabbitmq" % "amqp-client" % "5.13.1",
       "com.dimafeng" %% "testcontainers-scala-rabbitmq" % "0.39.7" % Test,
       "org.slf4j" % "slf4j-simple" % "1.7.32" % Test,
+    ),
+    Test / publishArtifact := true,
+    // sonatype config
+    publishTo := sonatypePublishToBundle.value,
+    ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org",
+    sonatypeRepository := "https://s01.oss.sonatype.org/service/local",
+    licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
+    homepage := Some(url("https://github.com/delimobil/cabbit")),
+    scmInfo := Some(ScmInfo(url("https://github.com/delimobil/cabbit"), "scm:git@github.com/delimobil/cabbit.git")),
+    developers := List(
+      Developer(
+        id = "nikiforo",
+        name = "Artem Nikiforov",
+        email = "anikiforov@delimobil.ru",
+        url = url("https://github.com/nikiforo"),
+      ),
     ),
   )

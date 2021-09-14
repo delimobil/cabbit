@@ -23,6 +23,7 @@ import org.scalatest.funsuite.AnyFunSuite
 import ru.delimobil.cabbit.algebra.ContentEncoding._
 import ru.delimobil.cabbit.algebra._
 import ru.delimobil.cabbit.config.declaration.Arguments
+import ru.delimobil.cabbit.config.declaration.BindDeclaration
 import ru.delimobil.cabbit.config.declaration.QueueDeclaration
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -38,11 +39,11 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   private implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
   private implicit val timer: Timer[IO] = IO.timer(scala.concurrent.ExecutionContext.global)
 
-  private val sleep = timer.sleep(50.millis)
+  private val sleep = timer.sleep(100.millis)
   private val rndQueue = IO.delay(QueueName(UUID.randomUUID().toString))
 
   private var container: RabbitContainer = _
-//  private var connection: Connection[IO] = _
+  private var connection: Connection[IO] = _
   private var channel: Channel[IO] = _
   private var rabbitUtils: RabbitUtils[IO] = _
   private var closeIO: IO[Unit] = _
@@ -59,7 +60,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
       .flatTap { case (((cont, conn), ch), closeAction) =>
         IO.delay {
           container = cont
-//          connection = conn
+          connection = conn
           channel = ch
           rabbitUtils = new RabbitUtils[IO](conn, ch)
           closeIO = closeAction
@@ -107,7 +108,14 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     }
   }
 
-  ignore("binding on default exchange results in error") {}
+  test("binding on default exchange results in error") {
+    rabbitUtils.spoilChannel[IOException] { ch =>
+      for {
+        qName <- rabbitUtils.queueDeclaredIO(Map.empty)
+        _ <- ch.queueBind(BindDeclaration(qName, ExchangeNameDefault, RoutingKeyDefault))
+      } yield {}
+    }
+  }
 
   test("queue declaration returns state, publisher publishes, delivery stream subscribes") {
     val nMessages = 3
@@ -140,20 +148,20 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("consumer rejects `basicGet`, `requeue = true`") {
-    val io: CheckGetFunc = Kleisli(
-      channel.basicGet(_, autoAck = false).flatTap { r =>
+    val io: CheckGetFunc = Kleisli { qName =>
+      channel.basicGet(qName, autoAck = false).flatTap { r =>
         channel.basicReject(DeliveryTag(r.getEnvelope.getDeliveryTag), requeue = true)
-      },
-    )
+      }
+    }
     checkGet(msgCount = 1, io)
   }
 
   test("consumer rejects `basicGet` `requeue = false`") {
-    val io: CheckGetFunc = Kleisli(
-      channel.basicGet(_, autoAck = false).flatTap { r =>
+    val io: CheckGetFunc = Kleisli { qName =>
+      channel.basicGet(qName, autoAck = false).flatTap { r =>
         channel.basicReject(DeliveryTag(r.getEnvelope.getDeliveryTag), requeue = false)
-      },
-    )
+      }
+    }
     checkGet(msgCount = 0, io)
   }
 
@@ -168,8 +176,8 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         _ <- messages.traverse_(channel.basicPublishFanout(bind.exchangeName, _))
         stream <- channel.deliveryStream(bind.queueName, prefetched)
         _ <- sleep
-        declareOk <- channel.queueDeclare(rabbitUtils.getQueue2(bind.queueName, qProps))
-        bodies <- rabbitUtils.readAck(stream)
+        declareOk <- channel.queueDeclare(rabbitUtils.getQueue(bind.queueName, qProps))
+        bodies <- rabbitUtils.timedRead(stream)
         _ = assert(declareOk.getConsumerCount == 1)
         _ = assert(declareOk.getMessageCount == (maxMessages - prefetched))
         _ = assert(messages == bodies)
@@ -222,34 +230,56 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("ten thousand requeues") {
-    val messages = List.fill(10)("hello from cabbit")
-    val amount: Long = 10000
+    val messages = (1 to 100).map(i => s"hello from cabbit-$i").toList
+    val expected = List.fill(200)(messages.take(50)).flatten
+    val amount = 10000L
+
     rabbitUtils.useQueueDeclared(Map.empty) { qName =>
-      channel
-        .deliveryStream(qName, prefetchCount = 100)
-        .productL(messages.traverse_(channel.basicPublishDirect(qName, _)))
+      messages
+        .traverse_(channel.basicPublishDirect(qName, _))
+        .productR(channel.deliveryStream(qName, prefetchCount = 50))
         .map { case (_, stream) =>
           stream
             .take(amount)
             .evalTap(delivery => channel.basicReject(DeliveryTag(delivery.getEnvelope.getDeliveryTag), requeue = true))
         }
         .pipe(Stream.force(_).compile.toList)
-        .map(list => assert(list.length == amount))
-        .void
+        .map { list =>
+          assert(list.map(d => decodeUtf8(d.getBody)) == expected)
+        }
     }
   }
 
-  test("dead-letter & max-length") {
+  test("dead-letter reject") {
+    val messages = (1 to 10).map(i => s"hello from cabbit-$i").toList
+
+    rabbitUtils.useBinded(Map.empty) { deadLetterBind =>
+      val args = Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name)
+
+      rabbitUtils
+        .queueDeclaredIO(args)
+        .flatTap(qName => messages.traverse_(msg => channel.basicPublishDirect(qName, msg)))
+        .productL(sleep)
+        .flatTap(qName => rabbitUtils.readReject(qName))
+        .flatMap(qName => rabbitUtils.readAck(deadLetterBind.queueName).product(rabbitUtils.readAck(qName)))
+        .map { case (deadDeliveries, deliveries) =>
+          assert(deliveries.isEmpty)
+          assert(messages == deadDeliveries)
+        }
+    }
+  }
+
+  test("max-length, deliveries are dead-letter'ed from head") {
     val messages = (1 to 10).map(i => s"hello from cabbit-$i").toList
 
     rabbitUtils.useBinded(Map.empty) { deadLetterBind =>
       val args: Map[String, AnyRef] =
         Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name, "x-max-length" -> Integer.valueOf(7))
       rabbitUtils
-        .bindedIO(args)
-        .flatTap(bind => messages.traverse_(msg => channel.basicPublishFanout(bind.exchangeName, msg)))
+        .queueDeclaredIO(args)
+        .flatTap(qName => messages.traverse_(msg => channel.basicPublishDirect(qName, msg)))
         .productL(sleep)
-        .flatMap(bind => rabbitUtils.readAll(deadLetterBind.queueName).product(rabbitUtils.readAll(bind.queueName)))
+        .flatMap(qName => rabbitUtils.readAck(deadLetterBind.queueName).product(rabbitUtils.readAck(qName)))
         .map { case (deadDeliveries, deliveries) =>
           val (left, right) = messages.splitAt(3)
           assert(left == deadDeliveries)
@@ -259,7 +289,21 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     }
   }
 
-  ignore("dead-letter & remove the queue") {}
+  test("dead-letter & remove the queue") {
+    val messages = (1 to 10).map(i => s"hello from cabbit-$i").toList
+
+    rabbitUtils.useBinded(Map.empty) { deadLetterBind =>
+      val args = Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name)
+      rabbitUtils
+        .bindedIO(args)
+        .flatTap(bind => messages.traverse_(msg => channel.basicPublishFanout(bind.exchangeName, msg)))
+        .productL(sleep)
+        .flatTap(bind => channel.queueDelete(bind.queueName))
+        .productL(sleep)
+        .productR(rabbitUtils.readAck(deadLetterBind.queueName))
+        .map(deadDeliveries => assert(deadDeliveries.isEmpty))
+    }
+  }
 
   test("alternate-exchange") {
     val routingKey = RoutingKey("valid.#")
@@ -272,7 +316,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         .basicPublish(exName, routedKey, routedMessage)
         .productR(channel.basicPublish(exName, nonRoutedKey, nonRoutedMessage))
         .productR(sleep)
-        .productR(rabbitUtils.readAll(routedQueue).product(rabbitUtils.readAll(nonRoutedQueue)))
+        .productR(rabbitUtils.readAck(routedQueue).product(rabbitUtils.readAck(nonRoutedQueue)))
         .map { case (routed, nonRouted) =>
           assert(routed == List(routedMessage))
           assert(nonRouted == List(nonRoutedMessage))
@@ -303,9 +347,9 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         _ <- channel.basicPublish(exName, newlyRoutedKey, newlyRoutedMessage)
         _ <- channel.basicReject(DeliveryTag(getResponse.getEnvelope.getDeliveryTag), requeue = true)
         _ <- sleep
-        routed <- rabbitUtils.readAll(routedQueue)
-        nonRouted <- rabbitUtils.readAll(nonRoutedQueue)
-        newlyRouted <- rabbitUtils.readAll(bind.queueName)
+        routed <- rabbitUtils.readAck(routedQueue)
+        nonRouted <- rabbitUtils.readAck(nonRoutedQueue)
+        newlyRouted <- rabbitUtils.readAck(bind.queueName)
         _ = assert(routed == List(routedMessage))
         _ = assert(nonRouted == List(nonRoutedMessage))
         _ = assert(newlyRouted == List(newlyRoutedMessage))
@@ -324,8 +368,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         bind <- rabbitUtils.bindedIO(args)
         _ <- channel.basicPublishFanout(bind.exchangeName, message)
         _ <- timer.sleep(ttl.millis)
-        res <- rabbitUtils.readAll(bind.queueName).product(rabbitUtils.readAll(deadLetterBind.queueName))
-        (empty, dead) = res
+        (empty, dead) <- rabbitUtils.readAck(bind.queueName).product(rabbitUtils.readAck(deadLetterBind.queueName))
         _ = assert(empty == List.empty)
         _ = assert(dead == List(message))
       } yield {}
@@ -359,7 +402,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         _ <- channel.basicPublishFanout(bind.exchangeName, message)
         response <- io.run(bind.queueName)
         _ <- sleep
-        declareOk <- channel.queueDeclare(rabbitUtils.getQueue2(bind.queueName, qProps))
+        declareOk <- channel.queueDeclare(rabbitUtils.getQueue(bind.queueName, qProps))
         _ = assert(decodeUtf8(response.getBody) === message)
         _ = assert(declareOk.getConsumerCount === 0)
         _ = assert(declareOk.getMessageCount === msgCount)

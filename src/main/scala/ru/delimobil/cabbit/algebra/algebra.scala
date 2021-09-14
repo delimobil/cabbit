@@ -18,6 +18,8 @@ object defaults {
   // act as the default exchange for content Publish methods and for default queue bindings
   val ExchangeNameDefault: ExchangeName = ExchangeName("")
 
+  val ExchangeNameTopic: ExchangeName = ExchangeName("amq.topic")
+
   // Is used for FANOUT exchanges
   val RoutingKeyDefault: RoutingKey = RoutingKey("")
 }

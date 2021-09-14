@@ -12,59 +12,56 @@ import com.rabbitmq.client.AMQP.Queue
 import com.rabbitmq.client.BuiltinExchangeType
 import com.rabbitmq.client.Delivery
 import fs2.Stream
-import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument
 import ru.delimobil.cabbit.algebra.ContentEncoding.decodeUtf8
 import ru.delimobil.cabbit.algebra._
 import ru.delimobil.cabbit.algebra.defaults.RoutingKeyDefault
 import ru.delimobil.cabbit.algebra.defaults.QueueNameDefault
 import ru.delimobil.cabbit.config.declaration.Arguments
+import ru.delimobil.cabbit.config.declaration.AutoDeleteConfig
 import ru.delimobil.cabbit.config.declaration.BindDeclaration
 import ru.delimobil.cabbit.config.declaration.ExchangeDeclaration
 import ru.delimobil.cabbit.config.declaration.QueueDeclaration
-import scala.concurrent.duration.FiniteDuration
+
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
 
 final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connection[F], ch: Channel[F]) {
 
-  import ru.delimobil.cabbit.algebra.BodyEncoder.instances.textUtf8
-
   private val uuidIO: F[UUID] = Sync[F].delay(UUID.randomUUID())
   private val rndEx: F[ExchangeName] = uuidIO.map(uuid => ExchangeName(uuid.toString))
   private val rndQu: F[QueueName] = uuidIO.map(uuid => QueueName(uuid.toString))
 
-  def readAck(
+  def timedRead(
     tuple: (ConsumerTag, Stream[F, Delivery]),
-    timeout: FiniteDuration = 100.millis,
+    halt: F[Unit] = Timer[F].sleep(150.millis),
+    ack: Delivery => F[Unit] = d => ch.basicAck(DeliveryTag(d.getEnvelope.getDeliveryTag), multiple = false),
   ): F[List[String]] =
     tuple._2
-      .evalTap(d => ch.basicAck(DeliveryTag(d.getEnvelope.getDeliveryTag), multiple = false))
-      .concurrently(Stream.eval_(Timer[F].sleep(timeout) *> ch.basicCancel(tuple._1)))
+      .evalTap(ack)
+      .concurrently(Stream.eval_(halt *> ch.basicCancel(tuple._1)))
       .compile
       .toList
       .map(_.map(d => decodeUtf8(d.getBody)))
 
-  def readAll(queue: QueueName, timeout: FiniteDuration = 100.millis): F[List[String]] =
-    ch.deliveryStream(queue, 100).flatMap(readAck(_, timeout))
+  def readAck(queue: QueueName, halt: F[Unit] = Timer[F].sleep(150.millis)): F[List[String]] =
+    ch.deliveryStream(queue, 100).flatMap { tuple =>
+      timedRead(tuple, halt)
+    }
 
-  def publish(messages: List[String], bind: BindDeclaration): F[Unit] =
-    messages.traverse_(publishOne(bind.exchangeName, bind.routingKey, _))
-
-  def publishOne(exchange: ExchangeName, key: RoutingKey, msg: String): F[Unit] =
-    ch.basicPublish(exchange, key, msg, mandatory = MandatoryArgument.Mandatory)
-
-  def declareRelease(bind: BindDeclaration): F[Unit] =
-    ch.exchangeDelete(bind.exchangeName) <* ch.queueDelete(bind.queueName)
+  def readReject(queue: QueueName, halt: F[Unit] = Timer[F].sleep(150.millis)): F[List[String]] =
+    ch.deliveryStream(queue, 100).flatMap { tuple =>
+      timedRead(tuple, halt, d => ch.basicReject(DeliveryTag(d.getEnvelope.getDeliveryTag), requeue = false))
+    }
 
   def bindQueueToExchangeIO(exName: ExchangeName, rk: RoutingKey, qProps: Arguments): F[BindDeclaration] =
     for {
       qName <- rndQu
-      _ <- ch.queueDeclare(getQueue2(qName, qProps))
+      _ <- ch.queueDeclare(getQueue(qName, qProps))
       bind = BindDeclaration(qName, exName, rk)
       _ <- ch.queueBind(bind)
     } yield bind
 
-  def getQueue2(qName: QueueName, qProps: Arguments): QueueDeclaration =
+  def getQueue(qName: QueueName, qProps: Arguments): QueueDeclaration =
     QueueDeclaration(qName, arguments = qProps)
 
   // rndExchange + autonameQueue(props) + FANOUT
@@ -78,8 +75,10 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
     bindedIO(qProps).flatMap(testFunc).toIO.unsafeRunSync()
 
   // Returns QueueName, because queueDeclare(QueueDeclaration) would throw on auto assigned name queues.
-  def queueDeclaredIO(qProps: Arguments): F[QueueName] =
-    ch.queueDeclare(QueueDeclaration(QueueNameDefault, arguments = qProps)).map(ok => QueueName(ok.getQueue))
+  def queueDeclaredIO(qProps: Arguments): F[QueueName] = {
+    val dec = QueueDeclaration(QueueNameDefault, autoDelete = AutoDeleteConfig.NonAutoDelete, arguments = qProps)
+    ch.queueDeclare(dec).map(ok => QueueName(ok.getQueue))
+  }
 
   def useQueueDeclared(qProps: Arguments)(testFunc: QueueName => F[Unit]): Unit =
     queueDeclaredIO(qProps).flatMap(testFunc).toIO.unsafeRunSync()
