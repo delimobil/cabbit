@@ -16,6 +16,7 @@ import fs2.Stream
 import ru.delimobil.cabbit.algebra.ContentEncoding.decodeUtf8
 import ru.delimobil.cabbit.algebra._
 import ru.delimobil.cabbit.config.declaration.Arguments
+import ru.delimobil.cabbit.config.declaration.AutoDeleteConfig
 import ru.delimobil.cabbit.config.declaration.BindDeclaration
 import ru.delimobil.cabbit.config.declaration.ExchangeDeclaration
 import ru.delimobil.cabbit.config.declaration.QueueDeclaration
@@ -29,20 +30,28 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
   private val rndEx: F[ExchangeName] = uuidIO.map(uuid => ExchangeName(uuid.toString))
   private val rndQu: F[QueueName] = uuidIO.map(uuid => QueueName(uuid.toString))
 
-  def readAck(
+  def timedRead(
     tuple: (ConsumerTag, Stream[F, Delivery]),
-    halt: F[Unit] = Timer[F].sleep(150.millis)
+    halt: F[Unit] = Timer[F].sleep(150.millis),
+    ack: Delivery => F[Unit] = d => ch.basicAck(DeliveryTag(d.getEnvelope.getDeliveryTag), multiple = false),
   ): F[List[String]] =
     tuple
       ._2
-      .evalTap(d => ch.basicAck(DeliveryTag(d.getEnvelope.getDeliveryTag), multiple = false))
+      .evalTap(ack)
       .concurrently(Stream.eval_(halt *> ch.basicCancel(tuple._1)))
       .compile
       .toList
       .map(_.map(d => decodeUtf8(d.getBody)))
 
-  def readAll(queue: QueueName, halt: F[Unit] = Timer[F].sleep(150.millis)): F[List[String]] =
-    ch.deliveryStream(queue, 100).flatMap(readAck(_, halt))
+  def readAck(queue: QueueName, halt: F[Unit] = Timer[F].sleep(150.millis)): F[List[String]] =
+    ch.deliveryStream(queue, 100).flatMap { tuple =>
+      timedRead(tuple, halt)
+    }
+
+  def readReject(queue: QueueName, halt: F[Unit] = Timer[F].sleep(150.millis)): F[List[String]] =
+    ch.deliveryStream(queue, 100).flatMap { tuple =>
+      timedRead(tuple, halt, d => ch.basicReject(DeliveryTag(d.getEnvelope.getDeliveryTag), requeue = false))
+    }
 
   def bindQueueToExchangeIO(exName: ExchangeName, rk: RoutingKey, qProps: Arguments): F[BindDeclaration] =
     for {
@@ -66,8 +75,10 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
     bindedIO(qProps).flatMap(testFunc).toIO.unsafeRunSync()
 
   // Returns QueueName, because queueDeclare(QueueDeclaration) would throw on auto assigned name queues.
-  def queueDeclaredIO(qProps: Arguments): F[QueueName] =
-    ch.queueDeclare(QueueDeclaration(QueueNameDefault, arguments = qProps)).map(ok => QueueName(ok.getQueue))
+  def queueDeclaredIO(qProps: Arguments): F[QueueName] = {
+    val dec = QueueDeclaration(QueueNameDefault, autoDelete = AutoDeleteConfig.NonAutoDelete , arguments = qProps)
+    ch.queueDeclare(dec).map(ok => QueueName(ok.getQueue))
+  }
 
   def useQueueDeclared(qProps: Arguments)(testFunc: QueueName => F[Unit]): Unit =
     queueDeclaredIO(qProps).flatMap(testFunc).toIO.unsafeRunSync()
