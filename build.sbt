@@ -6,7 +6,7 @@ val fs2Version = "2.5.9"
 val root = (project in file("."))
   .settings(
     name := "cabbit",
-    version := "0.0.13-SNAPSHOT",
+    version := "0.0.13",
     addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
     libraryDependencies ++= Seq(
       "co.fs2" %% "fs2-core" % fs2Version,
