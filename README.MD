@@ -1,6 +1,8 @@
 cabbit
 =============
 
+[![Latest version](https://img.shields.io/badge/cabbit-0.0.13-orange.svg)](https://github.com/delimobil/cabbit)
+
 A [cabbit] is a fictional hybrid between a cat and a rabbit.
 
 The main goal of the library is to wrap rabbit-client with cats-effects & fs2. The wrapper is intended to be thin and resemble the client. However,
@@ -10,6 +12,13 @@ The main goal of the library is to wrap rabbit-client with cats-effects & fs2. T
 Ready to start? Follow the white cabbit to CabbitSuite.
 
 [cabbit]: https://en.wikipedia.org/wiki/Cabbit
+
+## Usage
+
+Currently cabbit supports `scala 2.13` & `ce2`. 
+```sbt
+libraryDependencies += "ru.delimobil" %% "cabbit" % "0.0.13"
+```
 
 ### LICENSE ###
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this project except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
