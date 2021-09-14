@@ -6,7 +6,7 @@ val fs2Version = "2.5.9"
 val root = (project in file("."))
   .settings(
     name := "cabbit",
-    version := "0.0.12-SNAPSHOT",
+    version := "0.0.13-SNAPSHOT",
     addCompilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"),
     libraryDependencies ++= Seq(
       "co.fs2" %% "fs2-core" % fs2Version,
@@ -18,5 +18,10 @@ val root = (project in file("."))
       "com.dimafeng" %% "testcontainers-scala-rabbitmq" % "0.39.4" % Test,
       "org.slf4j" % "slf4j-simple" % "1.7.30" % Test
     ),
-    Test / publishArtifact := true
+    Test / publishArtifact := true,
+    // sonatype config
+    publishTo := sonatypePublishToBundle.value,
+    ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org",
+    sonatypeRepository := "https://s01.oss.sonatype.org/service/local",
+    licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt"))
   )
