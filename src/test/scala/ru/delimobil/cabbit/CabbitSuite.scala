@@ -22,6 +22,8 @@ import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
 import ru.delimobil.cabbit.algebra.ContentEncoding._
 import ru.delimobil.cabbit.algebra._
+import ru.delimobil.cabbit.algebra.defaults.ExchangeNameDefault
+import ru.delimobil.cabbit.algebra.defaults.RoutingKeyDefault
 import ru.delimobil.cabbit.config.declaration.Arguments
 import ru.delimobil.cabbit.config.declaration.BindDeclaration
 import ru.delimobil.cabbit.config.declaration.QueueDeclaration
@@ -43,7 +45,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   private val rndQueue = IO.delay(QueueName(UUID.randomUUID().toString))
 
   private var container: RabbitContainer = _
-  private var connection: Connection[IO] = _
+//  private var connection: Connection[IO] = _
   private var channel: Channel[IO] = _
   private var rabbitUtils: RabbitUtils[IO] = _
   private var closeIO: IO[Unit] = _
@@ -60,7 +62,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
       .flatTap { case (((cont, conn), ch), closeAction) =>
         IO.delay {
           container = cont
-          connection = conn
+//          connection = conn
           channel = ch
           rabbitUtils = new RabbitUtils[IO](conn, ch)
           closeIO = closeAction
@@ -247,6 +249,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         .map { list =>
           assert(list.map(d => decodeUtf8(d.getBody)) == expected)
         }
+        .void
     }
   }
 
@@ -266,6 +269,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
           assert(deliveries.isEmpty)
           assert(messages == deadDeliveries)
         }
+        .void
     }
   }
 
@@ -302,6 +306,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         .productL(sleep)
         .productR(rabbitUtils.readAck(deadLetterBind.queueName))
         .map(deadDeliveries => assert(deadDeliveries.isEmpty))
+        .void
     }
   }
 
@@ -368,7 +373,8 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         bind <- rabbitUtils.bindedIO(args)
         _ <- channel.basicPublishFanout(bind.exchangeName, message)
         _ <- timer.sleep(ttl.millis)
-        (empty, dead) <- rabbitUtils.readAck(bind.queueName).product(rabbitUtils.readAck(deadLetterBind.queueName))
+        res <- rabbitUtils.readAck(bind.queueName).product(rabbitUtils.readAck(deadLetterBind.queueName))
+        (empty, dead) = res
         _ = assert(empty == List.empty)
         _ = assert(dead == List(message))
       } yield {}
