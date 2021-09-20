@@ -68,7 +68,7 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
   def bindedIO(qProps: Arguments): F[BindDeclaration] =
     rndEx.flatMap { exName =>
       ch.exchangeDeclare(ExchangeDeclaration(exName, BuiltinExchangeType.FANOUT))
-        .productR(bindQueueToExchangeIO(exName, RoutingKeyDefault, qProps))
+        .productR(bindQueueToExchangeIO(exName, RoutingKey.default, qProps))
     }
 
   def useBinded(qProps: Arguments)(testFunc: BindDeclaration => F[Unit]): Unit =
@@ -76,7 +76,7 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
 
   // Returns QueueName, because queueDeclare(QueueDeclaration) would throw on auto assigned name queues.
   def queueDeclaredIO(qProps: Arguments): F[QueueName] = {
-    val dec = QueueDeclaration(QueueNameDefault, autoDelete = AutoDeleteConfig.NonAutoDelete , arguments = qProps)
+    val dec = QueueDeclaration(QueueName.default, autoDelete = AutoDeleteConfig.NonAutoDelete , arguments = qProps)
     ch.queueDeclare(dec).map(ok => QueueName(ok.getQueue))
   }
 

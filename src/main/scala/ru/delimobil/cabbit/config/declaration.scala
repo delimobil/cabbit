@@ -61,10 +61,10 @@ object declaration {
     // The server MUST pre-declare a direct exchange with no public name to act as the default
     // exchange for content Publish methods and for default queue bindings
     val ExchangeDeclarationDefault: ExchangeDeclaration =
-      ExchangeDeclaration(ExchangeNameDefault, BuiltinExchangeType.DIRECT)
+      ExchangeDeclaration(ExchangeName.default, BuiltinExchangeType.DIRECT)
 
     def bindDeclarationDefault(queueName: QueueName): BindDeclaration =
-      BindDeclaration(queueName, ExchangeNameDefault, RoutingKey(queueName.name))
+      BindDeclaration(queueName, ExchangeName.default, RoutingKey(queueName.name))
   }
 
   case class BindDeclaration(

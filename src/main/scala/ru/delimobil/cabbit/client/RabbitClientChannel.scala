@@ -69,7 +69,7 @@ private[client] final class RabbitClientChannel[F[_]: ConcurrentEffect](
       )
     }
 
-  def exchangeDeclare(exchangeDeclaration: ExchangeDeclaration): F[Unit] =
+  def exchangeDeclare(exchangeDeclaration: ExchangeDeclaration): F[client.AMQP.Exchange.DeclareOk] =
     channel.delay {
       _.exchangeDeclare(
         exchangeDeclaration.exchangeName.name,
@@ -79,7 +79,7 @@ private[client] final class RabbitClientChannel[F[_]: ConcurrentEffect](
         exchangeDeclaration.internal.bool,
         exchangeDeclaration.arguments.asJava,
       )
-    }.void
+    }
 
   def queueBind(bindDeclaration: BindDeclaration): F[Unit] =
     channel.delay {
@@ -91,7 +91,7 @@ private[client] final class RabbitClientChannel[F[_]: ConcurrentEffect](
       )
     }.void
 
-  def queueUnbind(bind: BindDeclaration): F[Unit] =
+  def queueUnbind(bind: BindDeclaration): F[client.AMQP.Queue.UnbindOk] =
     channel.delay(_.queueUnbind(bind.queueName.name, bind.exchangeName.name, bind.routingKey.name))
 
   def queueDelete(queueName: QueueName): F[client.AMQP.Queue.DeleteOk] =
@@ -106,7 +106,7 @@ private[client] final class RabbitClientChannel[F[_]: ConcurrentEffect](
     mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
     properties: BasicProperties = new BasicProperties(),
   )(implicit encoder: BodyEncoder[V]): F[Unit] =
-    basicPublish(ExchangeNameDefault, RoutingKey(queueName.name), body, mandatory, properties)
+    basicPublish(ExchangeName.default, RoutingKey(queueName.name), body, mandatory, properties)
 
   def basicPublishFanout[V](
     exchangeName: ExchangeName,
@@ -114,7 +114,7 @@ private[client] final class RabbitClientChannel[F[_]: ConcurrentEffect](
     mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
     properties: BasicProperties = new BasicProperties(),
   )(implicit encoder: BodyEncoder[V]): F[Unit] =
-    basicPublish(exchangeName, RoutingKeyDefault, body, mandatory, properties)
+    basicPublish(exchangeName, RoutingKey.default, body, mandatory, properties)
 
   def basicPublish[V](
     exchangeName: ExchangeName,

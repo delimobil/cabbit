@@ -4,7 +4,6 @@ import cats.effect.Blocker
 import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
 import cats.effect.Resource
-import cats.syntax.functor._
 import com.rabbitmq.client
 import ru.delimobil.cabbit.algebra.Channel
 import ru.delimobil.cabbit.algebra.ChannelConsumer

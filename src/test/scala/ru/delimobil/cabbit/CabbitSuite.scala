@@ -69,7 +69,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
             closeIO = closeAction
           }
       }
-      .unsafeRunSync
+      .unsafeRunSync()
   }
 
   override protected def afterAll(): Unit = {
@@ -114,7 +114,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     rabbitUtils.spoilChannel[IOException] { ch =>
       for {
         qName <- rabbitUtils.queueDeclaredIO(Map.empty)
-        _ <- ch.queueBind(BindDeclaration(qName, ExchangeNameDefault, RoutingKeyDefault))
+        _ <- ch.queueBind(BindDeclaration(qName, ExchangeName.default, RoutingKey.default))
       } yield {}
     }
   }

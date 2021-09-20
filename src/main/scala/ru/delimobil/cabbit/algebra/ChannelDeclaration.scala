@@ -9,11 +9,11 @@ trait ChannelDeclaration[F[_]] extends ShutdownNotifier[F] {
 
   def queueDeclare(queueDeclaration: QueueDeclaration): F[client.AMQP.Queue.DeclareOk]
 
-  def exchangeDeclare(exchangeDeclaration: ExchangeDeclaration): F[Unit]
+  def exchangeDeclare(exchangeDeclaration: ExchangeDeclaration): F[client.AMQP.Exchange.DeclareOk]
 
   def queueBind(queueBind: BindDeclaration): F[Unit]
 
-  def queueUnbind(bind: BindDeclaration): F[Unit]
+  def queueUnbind(bind: BindDeclaration): F[client.AMQP.Queue.UnbindOk]
 
   def queueDelete(queueName: QueueName): F[client.AMQP.Queue.DeleteOk]
 
