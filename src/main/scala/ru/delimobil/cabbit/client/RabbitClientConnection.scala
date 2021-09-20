@@ -13,7 +13,7 @@ import ru.delimobil.cabbit.algebra.ChannelPublisher
 import ru.delimobil.cabbit.algebra.Connection
 import ru.delimobil.cabbit.client.consumer.RabbitClientConsumerProvider
 
-final class RabbitClientConnection[F[_]: ConcurrentEffect: ContextShift](
+private[client] final class RabbitClientConnection[F[_]: ConcurrentEffect: ContextShift](
   raw: client.Connection,
   blocker: Blocker,
   consumerProvider: RabbitClientConsumerProvider[F],

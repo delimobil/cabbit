@@ -13,7 +13,7 @@ import ru.delimobil.cabbit.config.declaration.QueueDeclaration
 
 import scala.jdk.CollectionConverters._
 
-final class RabbitClientChannelDeclaration[F[_]: Functor](
+private[client] final class RabbitClientChannelDeclaration[F[_]: Functor](
   channel: ChannelOnPool[F]
 ) extends ChannelDeclaration[F] {
 

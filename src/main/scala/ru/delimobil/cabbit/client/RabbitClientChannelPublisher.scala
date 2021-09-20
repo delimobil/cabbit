@@ -4,7 +4,7 @@ import com.rabbitmq.client.AMQP.BasicProperties
 import ru.delimobil.cabbit.algebra._
 import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument
 
-final class RabbitClientChannelPublisher[F[_]](
+private[client] final class RabbitClientChannelPublisher[F[_]](
   channelOnPool: ChannelOnPool[F]
 ) extends ChannelPublisher[F] {
 

@@ -13,7 +13,7 @@ import ru.delimobil.cabbit.algebra._
 import ru.delimobil.cabbit.client.consumer.RabbitClientConsumerProvider
 import ru.delimobil.cabbit.config.declaration
 
-final class RabbitClientChannel[F[_]: ConcurrentEffect](
+private[client] final class RabbitClientChannel[F[_]: ConcurrentEffect](
   channelOnPool: ChannelOnPool[F],
   consumerProvider: RabbitClientConsumerProvider[F]
 ) extends Channel[F] {

@@ -18,7 +18,7 @@ import ru.delimobil.cabbit.config.CabbitConfig
 import scala.jdk.CollectionConverters._
 import scala.util.Random
 
-final class RabbitClientConnectionFactory[F[_]: ConcurrentEffect: ContextShift](
+private[cabbit] final class RabbitClientConnectionFactory[F[_]: ConcurrentEffect: ContextShift](
   config: CabbitConfig
 ) extends ConnectionFactory[F] {
 

@@ -12,7 +12,7 @@ import ru.delimobil.cabbit.algebra.DeliveryTag
 import ru.delimobil.cabbit.algebra.QueueName
 import ru.delimobil.cabbit.client.consumer.RabbitClientConsumerProvider
 
-final class RabbitClientChannelConsumer[F[_]: ConcurrentEffect](
+private[client] final class RabbitClientChannelConsumer[F[_]: ConcurrentEffect](
   channelOnPool: ChannelOnPool[F],
   consumerProvider: RabbitClientConsumerProvider[F],
 ) extends ChannelConsumer[F] {

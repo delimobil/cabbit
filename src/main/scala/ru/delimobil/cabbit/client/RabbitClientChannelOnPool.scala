@@ -12,7 +12,7 @@ import ru.delimobil.cabbit.algebra.ChannelOnPool
 import scala.util.Random
 
 /** @param channel instances must not be shared between threads */
-final class RabbitClientChannelOnPool[F[_]: Sync: ContextShift] private[client] (
+private[client] final class RabbitClientChannelOnPool[F[_]: Sync: ContextShift] (
   channel: client.Channel,
   blocker: Blocker
 ) extends ChannelOnPool[F] {
@@ -27,9 +27,9 @@ final class RabbitClientChannelOnPool[F[_]: Sync: ContextShift] private[client] 
     blocker.delay(channel.isOpen)
 }
 
-object RabbitClientChannelOnPool {
+private[client] object RabbitClientChannelOnPool {
 
-  def make[F[_]: Sync: ContextShift](channel: client.Channel): Resource[F, RabbitClientChannelOnPool[F]] =
+  def make[F[_]: Sync: ContextShift](channel: client.Channel): Resource[F, ChannelOnPool[F]] =
     Blocker
       .fromExecutorService(getChannelExecutor)
       .map(new RabbitClientChannelOnPool(channel, _))
