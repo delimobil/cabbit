@@ -4,6 +4,7 @@ import cats.effect.Blocker
 import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
 import cats.effect.Resource
+import cats.syntax.functor._
 import com.rabbitmq.client
 import ru.delimobil.cabbit.algebra.Channel
 import ru.delimobil.cabbit.algebra.ChannelConsumer
@@ -20,13 +21,13 @@ private[client] final class RabbitClientConnection[F[_]: ConcurrentEffect: Conte
 ) extends Connection[F] {
 
   def createChannelDeclaration: Resource[F, ChannelDeclaration[F]] =
-    createChannelOnPool.map(ch => new RabbitClientChannelDeclaration[F](ch))
+    createChannel
 
   def createChannelPublisher: Resource[F, ChannelPublisher[F]] =
-    createChannelOnPool.map(ch => new RabbitClientChannelPublisher[F](ch))
+    createChannel
 
   def createChannelConsumer: Resource[F, ChannelConsumer[F]] =
-    createChannelOnPool.map(ch => new RabbitClientChannelConsumer[F](ch, consumerProvider))
+    createChannel
 
   def createChannel: Resource[F, Channel[F]] =
     createChannelOnPool.map(ch => new RabbitClientChannel[F](ch, consumerProvider))

@@ -1,58 +1,104 @@
 package ru.delimobil.cabbit.client
 
 import cats.effect.ConcurrentEffect
+import cats.syntax.flatMap._
+import cats.syntax.functor._
+import com.rabbitmq.client
 import com.rabbitmq.client.AMQP.BasicProperties
-import com.rabbitmq.client.AMQP.Queue
-import com.rabbitmq.client.CancelCallback
-import com.rabbitmq.client.Consumer
-import com.rabbitmq.client.DeliverCallback
-import com.rabbitmq.client.Delivery
-import com.rabbitmq.client.GetResponse
+import fs2.Stream
 import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument
 import ru.delimobil.cabbit.algebra._
 import ru.delimobil.cabbit.client.consumer.RabbitClientConsumerProvider
-import ru.delimobil.cabbit.config.declaration
+import ru.delimobil.cabbit.config.declaration.BindDeclaration
+import ru.delimobil.cabbit.config.declaration.ExchangeDeclaration
+import ru.delimobil.cabbit.config.declaration.QueueDeclaration
+
+import scala.jdk.CollectionConverters._
 
 private[client] final class RabbitClientChannel[F[_]: ConcurrentEffect](
-  channelOnPool: ChannelOnPool[F],
+  channel: ChannelOnPool[F],
   consumerProvider: RabbitClientConsumerProvider[F]
 ) extends Channel[F] {
 
-  private val declarator = new RabbitClientChannelDeclaration(channelOnPool)
+  def basicQos(prefetchCount: Int): F[Unit] =
+    channel.delay(_.basicQos(prefetchCount))
 
-  private val consumer = new RabbitClientChannelConsumer(channelOnPool, consumerProvider)
+  def basicConsume(
+    queue: QueueName,
+    deliverCallback: client.DeliverCallback,
+    cancelCallback: client.CancelCallback
+  ): F[ConsumerTag] =
+    channel.delay(_.basicConsume(queue.name, deliverCallback, cancelCallback)).map(ConsumerTag)
 
-  private val publisher = new RabbitClientChannelPublisher(channelOnPool)
+  def basicConsume(queue: QueueName, consumer: client.Consumer): F[ConsumerTag] =
+    channel.delay(_.basicConsume(queue.name, consumer)).map(ConsumerTag)
+
+  def basicGet(queue: QueueName, autoAck: Boolean): F[client.GetResponse] =
+    channel.delay(_.basicGet(queue.name, autoAck))
+
+  def deliveryStream(
+    queueName: QueueName,
+    prefetchCount: Int
+  ): F[(ConsumerTag, Stream[F, client.Delivery])] =
+    for {
+      _ <- basicQos(prefetchCount)
+      (consumer, stream) <- consumerProvider.provide(prefetchCount)
+      tag <- basicConsume(queueName, consumer)
+    } yield (tag, stream)
 
   def basicAck(deliveryTag: DeliveryTag, multiple: Boolean): F[Unit] =
-    consumer.basicAck(deliveryTag, multiple)
+    channel.delay(_.basicAck(deliveryTag.number, multiple))
 
   def basicNack(deliveryTag: DeliveryTag, multiple: Boolean, requeue: Boolean): F[Unit] =
-    consumer.basicNack(deliveryTag, multiple, requeue)
+    channel.delay(_.basicNack(deliveryTag.number, multiple, requeue))
 
   def basicReject(deliveryTag: DeliveryTag, requeue: Boolean): F[Unit] =
-    consumer.basicReject(deliveryTag, requeue)
+    channel.delay(_.basicReject(deliveryTag.number, requeue))
 
   def basicCancel(consumerTag: ConsumerTag): F[Unit] =
-    consumer.basicCancel(consumerTag)
+    channel.delay(_.basicCancel(consumerTag.name))
 
-  def queueDeclare(queueDeclaration: declaration.QueueDeclaration): F[Queue.DeclareOk] =
-    declarator.queueDeclare(queueDeclaration)
+  def queueDeclare(queueDeclaration: QueueDeclaration): F[client.AMQP.Queue.DeclareOk] =
+    channel.delay {
+      _.queueDeclare(
+        queueDeclaration.queueName.name,
+        queueDeclaration.durable.bool,
+        queueDeclaration.exclusive.bool,
+        queueDeclaration.autoDelete.bool,
+        queueDeclaration.arguments.asJava,
+      )
+    }
 
-  def exchangeDeclare(exchangeDeclaration: declaration.ExchangeDeclaration): F[Unit] =
-    declarator.exchangeDeclare(exchangeDeclaration)
+  def exchangeDeclare(exchangeDeclaration: ExchangeDeclaration): F[Unit] =
+    channel.delay {
+      _.exchangeDeclare(
+        exchangeDeclaration.exchangeName.name,
+        exchangeDeclaration.exchangeType,
+        exchangeDeclaration.durable.bool,
+        exchangeDeclaration.autoDelete.bool,
+        exchangeDeclaration.internal.bool,
+        exchangeDeclaration.arguments.asJava,
+      )
+    }.void
 
-  def queueBind(queueBind: declaration.BindDeclaration): F[Unit] =
-    declarator.queueBind(queueBind)
+  def queueBind(bindDeclaration: BindDeclaration): F[Unit] =
+    channel.delay {
+      _.queueBind(
+        bindDeclaration.queueName.name,
+        bindDeclaration.exchangeName.name,
+        bindDeclaration.routingKey.name,
+        bindDeclaration.arguments.asJava,
+      )
+    }.void
 
-  def queueUnbind(bind: declaration.BindDeclaration): F[Unit] =
-    declarator.queueUnbind(bind)
+  def queueUnbind(bind: BindDeclaration): F[Unit] =
+    channel.delay(_.queueUnbind(bind.queueName.name, bind.exchangeName.name, bind.routingKey.name))
 
-  def queueDelete(queueName: QueueName): F[Queue.DeleteOk] =
-    declarator.queueDelete(queueName)
+  def queueDelete(queueName: QueueName): F[client.AMQP.Queue.DeleteOk] =
+    channel.delay(_.queueDelete(queueName.name))
 
   def exchangeDelete(exchangeName: ExchangeName): F[Unit] =
-    declarator.exchangeDelete(exchangeName)
+    channel.delay(_.exchangeDelete(exchangeName.name)).void
 
   def basicPublishDirect[V](
     queueName: QueueName,
@@ -60,7 +106,7 @@ private[client] final class RabbitClientChannel[F[_]: ConcurrentEffect](
     mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
     properties: BasicProperties = new BasicProperties(),
   )(implicit encoder: BodyEncoder[V]): F[Unit] =
-    publisher.basicPublishDirect(queueName, body, mandatory, properties)
+    basicPublish(ExchangeNameDefault, RoutingKey(queueName.name), body, mandatory, properties)
 
   def basicPublishFanout[V](
     exchangeName: ExchangeName,
@@ -68,7 +114,7 @@ private[client] final class RabbitClientChannel[F[_]: ConcurrentEffect](
     mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
     properties: BasicProperties = new BasicProperties(),
   )(implicit encoder: BodyEncoder[V]): F[Unit] =
-    publisher.basicPublishFanout(exchangeName, body, mandatory, properties)
+    basicPublish(exchangeName, RoutingKeyDefault, body, mandatory, properties)
 
   def basicPublish[V](
     exchangeName: ExchangeName,
@@ -76,28 +122,10 @@ private[client] final class RabbitClientChannel[F[_]: ConcurrentEffect](
     body: V,
     mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
     properties: BasicProperties = new BasicProperties(),
-  )(implicit encoder: BodyEncoder[V]): F[Unit] =
-    publisher.basicPublish(exchangeName, routingKey, body, mandatory, properties)
-
-  def basicQos(prefetchCount: Int): F[Unit] =
-    consumer.basicQos(prefetchCount)
-
-  def basicConsume(
-    queue: QueueName,
-    deliverCallback: DeliverCallback,
-    cancelCallback: CancelCallback
-  ): F[ConsumerTag] =
-    consumer.basicConsume(queue, deliverCallback, cancelCallback)
-
-  def basicConsume(queue: QueueName, callback: Consumer): F[ConsumerTag] =
-    consumer.basicConsume(queue, callback)
-
-  def basicGet(queue: QueueName, autoAck: Boolean): F[GetResponse] =
-    consumer.basicGet(queue, autoAck)
-
-  def deliveryStream(queue: QueueName, prefetchCount: Int): F[(ConsumerTag, fs2.Stream[F, Delivery])] =
-    consumer.deliveryStream(queue, prefetchCount)
-
+  )(implicit encoder: BodyEncoder[V]): F[Unit] = {
+    val props = encoder.alterProps(properties)
+    channel.delay(_.basicPublish(exchangeName.name, routingKey.name, mandatory.bool, props, encoder.encode(body)))
+  }
   def isOpen: F[Boolean] =
-    channelOnPool.isOpen
+    channel.isOpen
 }
