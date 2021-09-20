@@ -26,8 +26,8 @@ class RabbitContainer private {
   def makeConnection[F[_]: ConcurrentEffect: ContextShift]: Resource[F, Connection[F]] = {
     val nodes = NonEmptyList.one(CabbitConfig.CabbitNodeConfig(host, port))
     val config = CabbitConfig(nodes, virtualHost = "/", 60.seconds, username = None, password = None)
-    val connectionFactory = ConnectionFactoryProvider.provide[F](config)
-    connectionFactory.newConnection(None)
+    val connectionFactory = ConnectionFactoryProvider.provide[F](config, context = None)
+    connectionFactory.newConnection(config.addresses, appName = None)
   }
 }
 

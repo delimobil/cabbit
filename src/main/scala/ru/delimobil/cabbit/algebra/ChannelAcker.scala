@@ -1,6 +1,6 @@
 package ru.delimobil.cabbit.algebra
 
-trait ChannelAcker[F[_]] extends ShutdownNotifier[F] {
+trait ChannelAcker[F[_]] extends ChannelOnPool[F] {
 
   def basicAck(deliveryTag: DeliveryTag, multiple: Boolean): F[Unit]
 

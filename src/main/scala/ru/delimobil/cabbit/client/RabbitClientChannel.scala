@@ -128,6 +128,13 @@ private[client] final class RabbitClientChannel[F[_]: ConcurrentEffect](
     val props = encoder.alterProps(properties)
     channel.delay(_.basicPublish(exchangeName.name, routingKey.name, mandatory.bool, props, encoder.encode(body)))
   }
+
+  def delay[V](f: client.Channel => V): F[V] =
+    channel.delay(f)
+
+  def blockOn[V](f: client.Channel => F[V]): F[V] =
+    channel.blockOn(f)
+
   def isOpen: F[Boolean] =
     channel.isOpen
 }

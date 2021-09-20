@@ -35,7 +35,8 @@ val root = (project in file("."))
       "io.circe" %% "circe-parser" % circeVersion % Test,
       "com.rabbitmq" % "amqp-client" % "5.13.1",
       "com.dimafeng" %% "testcontainers-scala-rabbitmq" % "0.39.7" % Test,
-      "org.slf4j" % "slf4j-simple" % "1.7.32" % Test
+      "org.slf4j" % "slf4j-simple" % "1.7.32" % Test,
+      "com.github.pureconfig" %% "pureconfig" % "0.16.0" % Test
     ),
     Test / publishArtifact := true,
     // sonatype config
