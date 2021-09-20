@@ -37,7 +37,7 @@ private[client] final class RabbitClientConnection[F[_]: ConcurrentEffect: Conte
   private def createChannelOnPool: Resource[F, ChannelOnPool[F]] =
   // Doesn't use Resource.fromAutoCloseable because of custom error handler
     Resource.make(blocker.delay(raw.createChannel()))(channel => blocker.delay(closeChannel(channel)))
-      .flatMap(RabbitClientChannelOnPool.make[F])
+      .flatMap(channel => Resource.eval(RabbitClientChannelOnPool.make[F](channel, blocker)))
 
   private def closeChannel(ch: client.Channel): Unit =
     try { ch.close() } catch { case _: client.AlreadyClosedException => () }

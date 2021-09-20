@@ -1,7 +1,5 @@
 package ru.delimobil.cabbit.client
 
-import java.util.concurrent.Executors
-
 import cats.effect.Blocker
 import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
@@ -16,7 +14,6 @@ import ru.delimobil.cabbit.client.consumer.RabbitClientConsumerProvider
 import ru.delimobil.cabbit.config.CabbitConfig
 
 import scala.jdk.CollectionConverters._
-import scala.util.Random
 
 private[cabbit] final class RabbitClientConnectionFactory[F[_]: ConcurrentEffect: ContextShift](
   config: CabbitConfig
@@ -42,15 +39,6 @@ private[cabbit] final class RabbitClientConnectionFactory[F[_]: ConcurrentEffect
   def newConnection(appName: Option[String]): Resource[F, Connection[F]] =
     Resource
       .make(Sync[F].delay(factory.newConnection(addresses.asJava, appName.orNull)))(c => Sync[F].delay(c.close()))
-      .product(Blocker.fromExecutorService(getChannelExecutor))
+      .product(Blocker[F])
       .map { case (connection, blocker) => new RabbitClientConnection[F](connection, blocker, consumerProvider) }
-
-  private def getChannelExecutor =
-    Sync[F].delay(
-      Executors.newSingleThreadExecutor(runnable => {
-        val thread = new Thread(runnable, s"rabbit-client-connection-${Random.nextInt(1000)}")
-        thread.setDaemon(true)
-        thread
-      })
-    )
 }
