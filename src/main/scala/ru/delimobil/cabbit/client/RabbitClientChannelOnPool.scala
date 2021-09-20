@@ -12,7 +12,7 @@ import ru.delimobil.cabbit.algebra.ChannelOnPool
 private[client] final class RabbitClientChannelOnPool[F[_]: Sync: ContextShift] (
   semaphore: Semaphore[F],
   channel: client.Channel,
-  blocker: Blocker,
+  blocker: Blocker
 ) extends ChannelOnPool[F] {
 
   def delay[V](f: client.Channel => V): F[V] =

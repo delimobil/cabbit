@@ -1,21 +1,22 @@
 package ru.delimobil.cabbit.algebra
 
-import com.rabbitmq.client
+import com.rabbitmq.client.AMQP.Queue
+import com.rabbitmq.client.AMQP.Exchange
 import ru.delimobil.cabbit.config.declaration.BindDeclaration
 import ru.delimobil.cabbit.config.declaration.ExchangeDeclaration
 import ru.delimobil.cabbit.config.declaration.QueueDeclaration
 
 trait ChannelDeclaration[F[_]] extends ShutdownNotifier[F] {
 
-  def queueDeclare(queueDeclaration: QueueDeclaration): F[client.AMQP.Queue.DeclareOk]
+  def queueDeclare(queueDeclaration: QueueDeclaration): F[Queue.DeclareOk]
 
-  def exchangeDeclare(exchangeDeclaration: ExchangeDeclaration): F[client.AMQP.Exchange.DeclareOk]
+  def exchangeDeclare(exchangeDeclaration: ExchangeDeclaration): F[Exchange.DeclareOk]
 
-  def queueBind(queueBind: BindDeclaration): F[Unit]
+  def queueBind(queueBind: BindDeclaration): F[Queue.BindOk]
 
-  def queueUnbind(bind: BindDeclaration): F[client.AMQP.Queue.UnbindOk]
+  def queueUnbind(bind: BindDeclaration): F[Queue.UnbindOk]
 
-  def queueDelete(queueName: QueueName): F[client.AMQP.Queue.DeleteOk]
+  def queueDelete(queueName: QueueName): F[Queue.DeleteOk]
 
-  def exchangeDelete(exchangeName: ExchangeName): F[Unit]
+  def exchangeDelete(exchangeName: ExchangeName): F[Exchange.DeleteOk]
 }

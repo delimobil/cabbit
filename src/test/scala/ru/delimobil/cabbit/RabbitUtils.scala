@@ -76,7 +76,7 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
 
   // Returns QueueName, because queueDeclare(QueueDeclaration) would throw on auto assigned name queues.
   def queueDeclaredIO(qProps: Arguments): F[QueueName] = {
-    val dec = QueueDeclaration(QueueName.default, autoDelete = AutoDeleteConfig.NonAutoDelete , arguments = qProps)
+    val dec = QueueDeclaration(QueueName.default, autoDelete = AutoDeleteConfig.NonAutoDelete, arguments = qProps)
     ch.queueDeclare(dec).map(ok => QueueName(ok.getQueue))
   }
 

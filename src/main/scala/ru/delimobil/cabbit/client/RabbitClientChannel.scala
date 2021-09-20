@@ -5,6 +5,8 @@ import cats.syntax.flatMap._
 import cats.syntax.functor._
 import com.rabbitmq.client
 import com.rabbitmq.client.AMQP.BasicProperties
+import com.rabbitmq.client.AMQP.Exchange
+import com.rabbitmq.client.AMQP.Queue
 import fs2.Stream
 import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument
 import ru.delimobil.cabbit.algebra._
@@ -58,7 +60,7 @@ private[client] final class RabbitClientChannel[F[_]: ConcurrentEffect](
   def basicCancel(consumerTag: ConsumerTag): F[Unit] =
     channel.delay(_.basicCancel(consumerTag.name))
 
-  def queueDeclare(queueDeclaration: QueueDeclaration): F[client.AMQP.Queue.DeclareOk] =
+  def queueDeclare(queueDeclaration: QueueDeclaration): F[Queue.DeclareOk] =
     channel.delay {
       _.queueDeclare(
         queueDeclaration.queueName.name,
@@ -69,7 +71,7 @@ private[client] final class RabbitClientChannel[F[_]: ConcurrentEffect](
       )
     }
 
-  def exchangeDeclare(exchangeDeclaration: ExchangeDeclaration): F[client.AMQP.Exchange.DeclareOk] =
+  def exchangeDeclare(exchangeDeclaration: ExchangeDeclaration): F[Exchange.DeclareOk] =
     channel.delay {
       _.exchangeDeclare(
         exchangeDeclaration.exchangeName.name,
@@ -81,7 +83,7 @@ private[client] final class RabbitClientChannel[F[_]: ConcurrentEffect](
       )
     }
 
-  def queueBind(bindDeclaration: BindDeclaration): F[Unit] =
+  def queueBind(bindDeclaration: BindDeclaration): F[Queue.BindOk] =
     channel.delay {
       _.queueBind(
         bindDeclaration.queueName.name,
@@ -89,16 +91,16 @@ private[client] final class RabbitClientChannel[F[_]: ConcurrentEffect](
         bindDeclaration.routingKey.name,
         bindDeclaration.arguments.asJava,
       )
-    }.void
+    }
 
-  def queueUnbind(bind: BindDeclaration): F[client.AMQP.Queue.UnbindOk] =
+  def queueUnbind(bind: BindDeclaration): F[Queue.UnbindOk] =
     channel.delay(_.queueUnbind(bind.queueName.name, bind.exchangeName.name, bind.routingKey.name))
 
-  def queueDelete(queueName: QueueName): F[client.AMQP.Queue.DeleteOk] =
+  def queueDelete(queueName: QueueName): F[Queue.DeleteOk] =
     channel.delay(_.queueDelete(queueName.name))
 
-  def exchangeDelete(exchangeName: ExchangeName): F[Unit] =
-    channel.delay(_.exchangeDelete(exchangeName.name)).void
+  def exchangeDelete(exchangeName: ExchangeName): F[Exchange.DeleteOk] =
+    channel.delay(_.exchangeDelete(exchangeName.name))
 
   def basicPublishDirect[V](
     queueName: QueueName,

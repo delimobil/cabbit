@@ -33,7 +33,7 @@ object declaration {
     object NonInternal extends InternalConfig(false)
   }
 
-  type Arguments = Map[String, Any]
+  type Arguments = Map[String, AnyRef]
 
   case class QueueDeclaration(
     queueName: QueueName,
