@@ -23,10 +23,12 @@ val root = (project in file("."))
         case Some((2, 12)) =>
           List(
             "org.scala-lang.modules" %% "scala-collection-compat" % "2.5.0",
-            compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
           )
-        case Some((2, _)) =>
-          List(compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"))
+        case Some((2, 13)) =>
+          List(
+            "com.github.pureconfig" %% "pureconfig" % pureconfigVersion % Test,
+            "com.github.pureconfig" %% "pureconfig-cats" % pureconfigVersion % Test,
+          )
         case _ =>
           Nil
       }
@@ -40,8 +42,6 @@ val root = (project in file("."))
       "com.rabbitmq" % "amqp-client" % "5.13.1",
       "com.dimafeng" %% "testcontainers-scala-rabbitmq" % "0.39.7" % Test,
       "org.slf4j" % "slf4j-simple" % "1.7.32" % Test,
-//      "com.github.pureconfig" %% "pureconfig" % pureconfigVersion % Test,
-//      "com.github.pureconfig" %% "pureconfig-cats" % pureconfigVersion % Test
     ),
     Test / publishArtifact := true,
     // sonatype config

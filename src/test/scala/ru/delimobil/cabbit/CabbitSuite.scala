@@ -192,7 +192,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   test("Stream completes on queue removal") {
     rabbitUtils.useQueueDeclared(Map.empty) { qName =>
       for {
-        (_, stream) <- channel.deliveryStream(qName, 1)
+        stream <- channel.deliveryStream(qName, 1).map(_._2)
         _ <- channel.queueDelete(qName)
         _ <- sleep
         deliveriesEither <- IO.race(stream.compile.toList, IO.sleep(300.millis))
@@ -364,7 +364,8 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         bind <- rabbitUtils.bindedIO(args)
         _ <- channel.basicPublishFanout(bind.exchangeName, message)
         _ <- timer.sleep(ttl.millis)
-        (empty, dead) <- rabbitUtils.readAck(bind.queueName).product(rabbitUtils.readAck(deadLetterBind.queueName))
+        empty <- rabbitUtils.readAck(bind.queueName)
+        dead <- rabbitUtils.readAck(deadLetterBind.queueName)
         _ = assert(empty == List.empty)
         _ = assert(dead == List(message))
       } yield {}

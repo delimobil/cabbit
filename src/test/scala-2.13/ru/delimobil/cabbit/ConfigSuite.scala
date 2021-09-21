@@ -1,4 +1,3 @@
-/*
 package ru.delimobil.cabbit
 
 import cats.data.NonEmptyList
@@ -144,4 +143,3 @@ class ConfigSuite extends AnyFunSuite {
     assert(expected.asRight == ConfigSource.fromConfig(conf).load[ExchangeDeclaration])
   }
 }
-*/

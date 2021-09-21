@@ -1,6 +1,7 @@
 package ru.delimobil.cabbit.client
 
 import cats.effect.ConcurrentEffect
+import cats.syntax.apply._
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import com.rabbitmq.client
@@ -30,10 +31,10 @@ private[client] final class RabbitClientChannel[F[_]: ConcurrentEffect](
     deliverCallback: client.DeliverCallback,
     cancelCallback: client.CancelCallback
   ): F[ConsumerTag] =
-    channel.delay(_.basicConsume(queue.name, deliverCallback, cancelCallback)).map(ConsumerTag)
+    channel.delay(_.basicConsume(queue.name, deliverCallback, cancelCallback)).map(ConsumerTag(_))
 
   def basicConsume(queue: QueueName, consumer: client.Consumer): F[ConsumerTag] =
-    channel.delay(_.basicConsume(queue.name, consumer)).map(ConsumerTag)
+    channel.delay(_.basicConsume(queue.name, consumer)).map(ConsumerTag(_))
 
   def basicGet(queue: QueueName, autoAck: Boolean): F[client.GetResponse] =
     channel.delay(_.basicGet(queue.name, autoAck))
@@ -42,11 +43,9 @@ private[client] final class RabbitClientChannel[F[_]: ConcurrentEffect](
     queueName: QueueName,
     prefetchCount: Int
   ): F[(ConsumerTag, Stream[F, client.Delivery])] =
-    for {
-      _ <- basicQos(prefetchCount)
-      (consumer, stream) <- consumerProvider.provide(prefetchCount)
-      tag <- basicConsume(queueName, consumer)
-    } yield (tag, stream)
+    basicQos(prefetchCount)
+      .productR(consumerProvider.provide(prefetchCount))
+      .flatMap { case (consumer, stream) => basicConsume(queueName, consumer).tupleRight(stream) }
 
   def basicAck(deliveryTag: DeliveryTag, multiple: Boolean): F[Unit] =
     channel.delay(_.basicAck(deliveryTag.number, multiple))
