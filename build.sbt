@@ -4,6 +4,7 @@ ThisBuild / crossScalaVersions ++= Seq("2.13.6", "3.0.2", "2.12.15")
 
 val fs2Version = "2.5.9"
 val circeVersion = "0.14.1"
+val pureconfigVersion = "0.16.0"
 
 val root = (project in file("."))
   .settings(
@@ -36,7 +37,8 @@ val root = (project in file("."))
       "com.rabbitmq" % "amqp-client" % "5.13.1",
       "com.dimafeng" %% "testcontainers-scala-rabbitmq" % "0.39.7" % Test,
       "org.slf4j" % "slf4j-simple" % "1.7.32" % Test,
-      "com.github.pureconfig" %% "pureconfig" % "0.16.0" % Test
+      "com.github.pureconfig" %% "pureconfig" % pureconfigVersion % Test,
+      "com.github.pureconfig" %% "pureconfig-cats" % pureconfigVersion % Test
     ),
     Test / publishArtifact := true,
     // sonatype config

@@ -5,32 +5,32 @@ import ru.delimobil.cabbit.algebra._
 
 object declaration {
 
-  sealed abstract class DurableConfig(val bool: Boolean)
+  final case class DurableConfig(bool: Boolean) extends AnyVal
 
   object DurableConfig {
-    object Durable extends DurableConfig(true)
-    object NonDurable extends DurableConfig(false)
+    val Durable: DurableConfig = DurableConfig(true)
+    val NonDurable: DurableConfig = DurableConfig(false)
   }
 
-  sealed abstract class ExclusiveConfig(val bool: Boolean)
+  final case class ExclusiveConfig(bool: Boolean) extends AnyVal
 
   object ExclusiveConfig {
-    object Exclusive extends ExclusiveConfig(true)
-    object NonExclusive extends ExclusiveConfig(false)
+    val Exclusive: ExclusiveConfig = ExclusiveConfig(true)
+    val NonExclusive: ExclusiveConfig = ExclusiveConfig(false)
   }
 
-  sealed abstract class AutoDeleteConfig(val bool: Boolean)
+  final case class AutoDeleteConfig(bool: Boolean) extends AnyVal
 
   object AutoDeleteConfig {
-    object AutoDelete extends AutoDeleteConfig(true)
-    object NonAutoDelete extends AutoDeleteConfig(false)
+    val AutoDelete: AutoDeleteConfig =  AutoDeleteConfig(true)
+    val NonAutoDelete: AutoDeleteConfig = AutoDeleteConfig(false)
   }
 
-  sealed abstract class InternalConfig(val bool: Boolean)
+  final case class InternalConfig(bool: Boolean) extends AnyVal
 
   object InternalConfig {
-    object Internal extends InternalConfig(true)
-    object NonInternal extends InternalConfig(false)
+    val Internal: InternalConfig = InternalConfig(true)
+    val NonInternal: InternalConfig = InternalConfig(false)
   }
 
   type Arguments = Map[String, Any]
