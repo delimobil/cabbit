@@ -1,6 +1,6 @@
 ThisBuild / scalaVersion := "2.13.6"
 ThisBuild / organization := "ru.delimobil"
-ThisBuild / crossScalaVersions ++= Seq("2.13.6", "3.0.2", "2.12.15")
+ThisBuild / crossScalaVersions ++= Seq("2.13.6", "3.0.2")
 
 val fs2Version = "2.5.9"
 val circeVersion = "0.14.1"
@@ -21,7 +21,10 @@ val root = (project in file("."))
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2, 12)) =>
-          List("org.scala-lang.modules" %% "scala-collection-compat" % "2.5.0")
+          List(
+            "org.scala-lang.modules" %% "scala-collection-compat" % "2.5.0",
+            compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1")
+          )
         case Some((2, _)) =>
           List(compilerPlugin("com.olegpy" %% "better-monadic-for" % "0.3.1"))
         case _ =>
@@ -37,8 +40,8 @@ val root = (project in file("."))
       "com.rabbitmq" % "amqp-client" % "5.13.1",
       "com.dimafeng" %% "testcontainers-scala-rabbitmq" % "0.39.7" % Test,
       "org.slf4j" % "slf4j-simple" % "1.7.32" % Test,
-      "com.github.pureconfig" %% "pureconfig" % pureconfigVersion % Test,
-      "com.github.pureconfig" %% "pureconfig-cats" % pureconfigVersion % Test
+//      "com.github.pureconfig" %% "pureconfig" % pureconfigVersion % Test,
+//      "com.github.pureconfig" %% "pureconfig-cats" % pureconfigVersion % Test
     ),
     Test / publishArtifact := true,
     // sonatype config

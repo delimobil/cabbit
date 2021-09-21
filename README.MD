@@ -15,7 +15,7 @@ Ready to start? Follow the white cabbit to CabbitSuite.
 
 ## Usage
 
-Currently cabbit supports `scala 2.13` & `ce2`. 
+Currently cabbit is cross built for `scala "2.13.6", "3.0.2"` & `ce2`. 
 ```sbt
 libraryDependencies += "ru.delimobil" %% "cabbit" % "0.0.13"
 ```

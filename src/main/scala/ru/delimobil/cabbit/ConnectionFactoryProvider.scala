@@ -2,7 +2,7 @@ package ru.delimobil.cabbit
 
 import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
-import com.rabbitmq.client
+import com.rabbitmq.client.{ConnectionFactory => JConnectionFactory}
 import javax.net.ssl.SSLContext
 import ru.delimobil.cabbit.algebra.ConnectionFactory
 import ru.delimobil.cabbit.client.RabbitClientConnectionFactory
@@ -16,6 +16,6 @@ object ConnectionFactoryProvider {
   ): ConnectionFactory[F] =
     provide(context.fold(config.factoryDefaultSsl)(config.factoryExternalSsl))
 
-  def provide[F[_]: ConcurrentEffect: ContextShift](factory: => client.ConnectionFactory): ConnectionFactory[F] =
+  def provide[F[_]: ConcurrentEffect: ContextShift](factory: => JConnectionFactory): ConnectionFactory[F] =
     new RabbitClientConnectionFactory[F](factory)
 }

@@ -273,7 +273,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     val messages = (1 to 10).map(i => s"hello from cabbit-$i").toList
 
     rabbitUtils.useBinded(Map.empty) { deadLetterBind =>
-      val args = Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name, "x-max-length" -> 7)
+      val args: Arguments = Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name, "x-max-length" -> 7)
       rabbitUtils
         .queueDeclaredIO(args)
         .flatTap(qName => messages.traverse_(msg => channel.basicPublishDirect(qName, msg)))
