@@ -1,13 +1,12 @@
 cabbit
 =============
 
-[![Latest version](https://img.shields.io/badge/cabbit-0.0.13-orange.svg)](https://github.com/delimobil/cabbit)
+[![Latest version](https://img.shields.io/badge/cabbit-0.0.15-orange.svg)](https://github.com/delimobil/cabbit)
 
 A [cabbit] is a fictional hybrid between a cat and a rabbit.
 
-The main goal of the library is to wrap rabbit-client with cats-effects & fs2. The wrapper is intended to be thin and resemble the client. However,
-- It's widely spread to separate producer, declarator and publisher, thus it is mentioned in algebra.
-- Client's channel is not thread safe, hence a dedicated fixed thread pool is assigned to every channel.
+The main goal of the library is to wrap rabbit-client with cats-effect & fs2.
+The wrapper is intended to be thin and resemble the client.
 
 Ready to start? Follow the white cabbit to CabbitSuite.
 
@@ -17,7 +16,7 @@ Ready to start? Follow the white cabbit to CabbitSuite.
 
 Currently cabbit is cross built for `scala "2.13.6", "3.0.2"` & `ce2`. 
 ```sbt
-libraryDependencies += "ru.delimobil" %% "cabbit" % "0.0.13"
+libraryDependencies += "ru.delimobil" %% "cabbit" % "0.0.15"
 ```
 
 ### LICENSE ###
