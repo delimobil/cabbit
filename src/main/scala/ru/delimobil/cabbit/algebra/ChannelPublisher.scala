@@ -3,7 +3,7 @@ package ru.delimobil.cabbit.algebra
 import com.rabbitmq.client.AMQP.BasicProperties
 import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument
 
-trait ChannelPublisher[F[_]] extends ShutdownNotifier[F] {
+trait ChannelPublisher[F[_]] extends ChannelOnPool[F] {
 
   def basicPublishDirect[V](
     queueName: QueueName,

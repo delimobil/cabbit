@@ -13,20 +13,20 @@ import ru.delimobil.cabbit.algebra.ChannelPublisher
 import ru.delimobil.cabbit.algebra.Connection
 import ru.delimobil.cabbit.client.consumer.RabbitClientConsumerProvider
 
-final class RabbitClientConnection[F[_]: ConcurrentEffect: ContextShift](
+private[client] final class RabbitClientConnection[F[_]: ConcurrentEffect: ContextShift](
   raw: client.Connection,
   blocker: Blocker,
   consumerProvider: RabbitClientConsumerProvider[F],
 ) extends Connection[F] {
 
   def createChannelDeclaration: Resource[F, ChannelDeclaration[F]] =
-    createChannelOnPool.map(ch => new RabbitClientChannelDeclaration[F](ch))
+    createChannel
 
   def createChannelPublisher: Resource[F, ChannelPublisher[F]] =
-    createChannelOnPool.map(ch => new RabbitClientChannelPublisher[F](ch))
+    createChannel
 
   def createChannelConsumer: Resource[F, ChannelConsumer[F]] =
-    createChannelOnPool.map(ch => new RabbitClientChannelConsumer[F](ch, consumerProvider))
+    createChannel
 
   def createChannel: Resource[F, Channel[F]] =
     createChannelOnPool.map(ch => new RabbitClientChannel[F](ch, consumerProvider))
@@ -36,9 +36,10 @@ final class RabbitClientConnection[F[_]: ConcurrentEffect: ContextShift](
 
   private def createChannelOnPool: Resource[F, ChannelOnPool[F]] =
   // Doesn't use Resource.fromAutoCloseable because of custom error handler
-    Resource.make(blocker.delay(raw.createChannel()))(channel => blocker.delay(closeChannel(channel)))
-      .flatMap(RabbitClientChannelOnPool.make[F])
+    Resource.make(blocker.delay(raw.createChannel()))(channel => blocker.delay(close(channel)))
+      .flatMap(channel => Resource.eval(RabbitClientChannelOnPool.make[F](channel, blocker)))
 
-  private def closeChannel(ch: client.Channel): Unit =
-    try { ch.close() } catch { case _: client.AlreadyClosedException => () }
+  private def close(channel: client.Channel): Unit =
+    try { channel.close() }
+    catch { case _: client.AlreadyClosedException => () }
 }
