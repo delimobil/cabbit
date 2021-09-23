@@ -7,6 +7,4 @@ trait ChannelAcker[F[_]] extends ChannelOnPool[F] {
   def basicNack(deliveryTag: DeliveryTag, multiple: Boolean, requeue: Boolean): F[Unit]
 
   def basicReject(deliveryTag: DeliveryTag, requeue: Boolean): F[Unit]
-
-  def basicCancel(consumerTag: ConsumerTag): F[Unit]
 }

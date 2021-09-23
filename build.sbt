@@ -9,7 +9,7 @@ val pureconfigVersion = "0.16.0"
 val root = (project in file("."))
   .settings(
     name := "cabbit",
-    version := "0.0.15",
+    version := "0.0.16-SNAPSHOT",
     scalacOptions ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((3, _)) =>

@@ -21,4 +21,6 @@ trait ChannelConsumer[F[_]] extends ChannelAcker[F] {
     queue: QueueName,
     prefetchCount: Int
   ): F[(ConsumerTag, Stream[F, client.Delivery])]
+
+  def basicCancel(consumerTag: ConsumerTag): F[Unit]
 }
