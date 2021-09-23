@@ -1,7 +1,7 @@
 cabbit
 =============
 
-[![Latest version](https://img.shields.io/badge/cabbit-0.0.15-orange.svg)](https://github.com/delimobil/cabbit)
+[![Latest version](https://img.shields.io/badge/cabbit-0.0.16-orange.svg)](https://github.com/delimobil/cabbit)
 
 A [cabbit] is a fictional hybrid between a cat and a rabbit.
 
@@ -16,7 +16,7 @@ Ready to start? Follow the white cabbit to CabbitSuite.
 
 Currently cabbit is cross built for `scala "2.13.6", "3.0.2"` & `ce2`. 
 ```sbt
-libraryDependencies += "ru.delimobil" %% "cabbit" % "0.0.15"
+libraryDependencies += "ru.delimobil" %% "cabbit" % "0.0.16"
 ```
 
 ### LICENSE ###
