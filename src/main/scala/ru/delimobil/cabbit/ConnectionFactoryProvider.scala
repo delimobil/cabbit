@@ -1,5 +1,6 @@
 package ru.delimobil.cabbit
 
+import cats.effect.Blocker
 import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
 import com.rabbitmq.client.{ConnectionFactory => JConnectionFactory}
@@ -11,11 +12,12 @@ import ru.delimobil.cabbit.config.CabbitConfig
 object ConnectionFactoryProvider {
 
   def provide[F[_]: ConcurrentEffect: ContextShift](
+    blocker: Blocker,
     config: CabbitConfig,
     context: Option[SSLContext]
   ): ConnectionFactory[F] =
-    provide(context.fold(config.factoryDefaultSsl)(config.factoryExternalSsl))
+    provide(blocker, context.fold(config.factoryDefaultSsl)(config.factoryExternalSsl))
 
-  def provide[F[_]: ConcurrentEffect: ContextShift](factory: => JConnectionFactory): ConnectionFactory[F] =
-    new RabbitClientConnectionFactory[F](factory)
+  def provide[F[_]: ConcurrentEffect: ContextShift](blocker: Blocker, factory: => JConnectionFactory): ConnectionFactory[F] =
+    new RabbitClientConnectionFactory[F](blocker, factory)
 }
