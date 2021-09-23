@@ -88,22 +88,22 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("connection is closed") {
-    val actual = checkShutdownNotifier[IO, Connection[IO]](container)(Resource.pure[IO, Connection[IO]](_))
+    val actual = checkShutdownNotifier[IO, Connection[IO]](Resource.pure[IO, Connection[IO]](_))
     assertResult((true, false))(actual)
   }
 
   test("channel declaration is closed") {
-    val actual = checkShutdownNotifier[IO, ChannelDeclaration[IO]](container)(_.createChannelDeclaration)
+    val actual = checkShutdownNotifier[IO, ChannelDeclaration[IO]](_.createChannelDeclaration)
     assertResult((true, false))(actual)
   }
 
   test("channel publisher is closed") {
-    val actual = checkShutdownNotifier[IO, ChannelPublisher[IO]](container)(_.createChannelPublisher)
+    val actual = checkShutdownNotifier[IO, ChannelPublisher[IO]](_.createChannelPublisher)
     assertResult((true, false))(actual)
   }
 
   test("channel consumer is closed") {
-    val actual = checkShutdownNotifier[IO, ChannelConsumer[IO]](container)(_.createChannelConsumer)
+    val actual = checkShutdownNotifier[IO, ChannelConsumer[IO]](_.createChannelConsumer)
     assertResult((true, false))(actual)
   }
 
@@ -393,8 +393,6 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   private def checkShutdownNotifier[F[_]: ConcurrentEffect: ContextShift: Timer, T <: ShutdownNotifier[F]](
-    container: RabbitContainer
-  )(
     f: Connection[F] => Resource[F, T]
   ): (Boolean, Boolean) = {
     val ((_, openDuringUse), openAfterUse) =
