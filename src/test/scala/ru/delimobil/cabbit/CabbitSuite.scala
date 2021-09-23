@@ -4,6 +4,7 @@ import java.io.IOException
 import java.util.UUID
 
 import cats.data.Kleisli
+import cats.effect.Blocker
 import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
 import cats.effect.IO
@@ -12,6 +13,7 @@ import cats.effect.Timer
 import cats.effect.syntax.concurrent._
 import cats.effect.syntax.effect._
 import cats.syntax.apply._
+import cats.syntax.either._
 import cats.syntax.flatMap._
 import cats.syntax.foldable._
 import cats.syntax.functor._
@@ -45,6 +47,8 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   private val rndQueue = IO.delay(QueueName(UUID.randomUUID().toString))
 
   private var container: RabbitContainer = _
+  private var shutdownIO: IO[Unit] = _
+  private var blocker: Blocker = _
   private var connection: Connection[IO] = _
   private var channel: Channel[IO] = _
   private var rabbitUtils: RabbitUtils[IO] = _
@@ -54,15 +58,17 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
-    RabbitContainer
-      .make[IO]
-      .mproduct(_.makeConnection[IO])
+    Resource.eval(RabbitContainer[IO])
+      .product(Blocker[IO])
+      .mproduct { case (tuple, blocker) => tuple._1.makeConnection[IO](blocker) }
       .mproduct(_._2.createChannel)
       .allocated
       .flatTap {
-        case (((cont, conn), ch), closeAction) =>
+        case (((((cont, shutdown), block), conn), ch), closeAction) =>
           IO.delay {
             container = cont
+            shutdownIO = shutdown
+            blocker = block
             connection = conn
             channel = ch
             rabbitUtils = new RabbitUtils[IO](conn, ch)
@@ -77,22 +83,22 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     closeIO.unsafeRunSync()
   }
 
-  ignore("connection is closed") {
+  test("connection is closed") {
     val actual = checkShutdownNotifier[IO, Connection[IO]](container)(Resource.pure[IO, Connection[IO]](_))
     assertResult((true, false))(actual)
   }
 
-  ignore("channel declaration is closed") {
+  test("channel declaration is closed") {
     val actual = checkShutdownNotifier[IO, ChannelDeclaration[IO]](container)(_.createChannelDeclaration)
     assertResult((true, false))(actual)
   }
 
-  ignore("channel publisher is closed") {
+  test("channel publisher is closed") {
     val actual = checkShutdownNotifier[IO, ChannelPublisher[IO]](container)(_.createChannelPublisher)
     assertResult((true, false))(actual)
   }
 
-  ignore("channel consumer is closed") {
+  test("channel consumer is closed") {
     val actual = checkShutdownNotifier[IO, ChannelConsumer[IO]](container)(_.createChannelConsumer)
     assertResult((true, false))(actual)
   }
@@ -194,16 +200,15 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
       for {
         stream <- channel.deliveryStream(qName, 1).map(_._2)
         _ <- channel.queueDelete(qName)
-        _ <- sleep
         deliveriesEither <- IO.race(stream.compile.toList, IO.sleep(300.millis))
-        _ = assert(deliveriesEither.isLeft)
+        _ = assert(deliveriesEither == List.empty.asLeft)
       } yield {}
     }
   }
 
   test("two exclusive queues on one connection should work") {
     container
-      .makeConnection[IO]
+      .makeConnection[IO](blocker)
       .flatMap(conn => (conn.createChannelDeclaration, conn.createChannelDeclaration).tupled)
       .use { case (channel1, channel2) =>
         rabbitUtils.declareExclusive(channel1, channel2)
@@ -213,7 +218,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("only one of two exclusive queues on different connections should work") {
-    val connRes = container.makeConnection[IO].mproduct(_.createChannelDeclaration)
+    val connRes = container.makeConnection[IO](blocker).mproduct(_.createChannelDeclaration)
 
     (connRes, connRes)
       .tupled
@@ -372,6 +377,17 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     }
   }
 
+  test("Stream completes on rabbitmq shutdown") {
+    rabbitUtils.useQueueDeclared(Map.empty) { qName =>
+      for {
+        stream <- channel.deliveryStream(qName, 1).map(_._2)
+        _ <- shutdownIO
+        deliveriesEither <- IO.race(stream.compile.toList, IO.sleep(300.millis))
+        _ = assert(deliveriesEither == List.empty.asLeft)
+      } yield {}
+    }
+  }
+
   private def checkShutdownNotifier[F[_]: ConcurrentEffect: ContextShift: Timer, T <: ShutdownNotifier[F]](
     container: RabbitContainer
   )(
@@ -379,7 +395,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   ): (Boolean, Boolean) = {
     val ((_, openDuringUse), openAfterUse) =
       container
-        .makeConnection[F]
+        .makeConnection[F](blocker)
         .flatMap(f)
         .use(notifier => notifier.isOpen.tupleLeft(notifier))
         .mproduct(_._1.isOpen)
