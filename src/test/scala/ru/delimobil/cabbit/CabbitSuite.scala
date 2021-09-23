@@ -58,22 +58,26 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
+
     Resource.eval(RabbitContainer[IO])
-      .product(Blocker[IO])
-      .mproduct { case (tuple, blocker) => tuple._1.makeConnection[IO](blocker) }
-      .mproduct(_._2.createChannel)
+      .flatMap { case (cont, shutdown) =>
+        for {
+          block <- Blocker[IO]
+          conn <- cont.makeConnection[IO](block)
+          ch <- conn.createChannel
+        } yield (cont, shutdown, block, conn, ch)
+      }
       .allocated
-      .flatTap {
-        case (((((cont, shutdown), block), conn), ch), closeAction) =>
-          IO.delay {
-            container = cont
-            shutdownIO = shutdown
-            blocker = block
-            connection = conn
-            channel = ch
-            rabbitUtils = new RabbitUtils[IO](conn, ch)
-            closeIO = closeAction
-          }
+      .flatTap { case ((cont, shutdown, block, conn, ch), closeAction) =>
+        IO.delay {
+          container = cont
+          shutdownIO = shutdown
+          blocker = block
+          connection = conn
+          channel = ch
+          rabbitUtils = new RabbitUtils[IO](conn, ch)
+          closeIO = closeAction
+        }
       }
       .unsafeRunSync()
   }
