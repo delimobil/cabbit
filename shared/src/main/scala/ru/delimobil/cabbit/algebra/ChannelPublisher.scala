@@ -2,8 +2,12 @@ package ru.delimobil.cabbit.algebra
 
 import com.rabbitmq.client.AMQP.BasicProperties
 import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument
+import ru.delimobil.cabbit.model.BodyEncoder
+import ru.delimobil.cabbit.model.ExchangeName
+import ru.delimobil.cabbit.model.QueueName
+import ru.delimobil.cabbit.model.RoutingKey
 
-trait ChannelPublisher[F[_]] extends ChannelOnPool[F] {
+trait ChannelPublisher[F[_]] extends ShutdownNotifier[F] {
 
   def basicPublishDirect[V](
     queueName: QueueName,

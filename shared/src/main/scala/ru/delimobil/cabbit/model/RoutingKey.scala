@@ -1,4 +1,4 @@
-package ru.delimobil.cabbit.algebra
+package ru.delimobil.cabbit.model
 
 final case class RoutingKey(name: String) extends AnyVal
 

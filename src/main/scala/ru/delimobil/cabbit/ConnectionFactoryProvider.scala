@@ -7,7 +7,7 @@ import com.rabbitmq.client.{ConnectionFactory => JConnectionFactory}
 import javax.net.ssl.SSLContext
 import ru.delimobil.cabbit.algebra.ConnectionFactory
 import ru.delimobil.cabbit.client.RabbitClientConnectionFactory
-import ru.delimobil.cabbit.config.CabbitConfig
+import ru.delimobil.cabbit.model.CabbitConfig
 
 object ConnectionFactoryProvider {
 

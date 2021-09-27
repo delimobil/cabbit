@@ -1,4 +1,4 @@
-package ru.delimobil.cabbit.algebra
+package ru.delimobil.cabbit.model
 
 case class ContentType(raw: String) extends AnyVal
 

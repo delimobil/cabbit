@@ -1,10 +1,10 @@
-package ru.delimobil.cabbit.algebra
+package ru.delimobil.cabbit.model
 
 import com.rabbitmq.client.AMQP.BasicProperties
 import io.circe.Encoder
 import io.circe.syntax._
-import ru.delimobil.cabbit.algebra.ContentEncoding._
-import ru.delimobil.cabbit.algebra.ContentType._
+import ru.delimobil.cabbit.model.ContentEncoding._
+import ru.delimobil.cabbit.model.ContentType._
 
 trait BodyEncoder[V] {
   def encode(body: V): Array[Byte]

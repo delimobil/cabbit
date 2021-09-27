@@ -13,13 +13,18 @@ import com.rabbitmq.client.AMQP.Queue
 import com.rabbitmq.client.BuiltinExchangeType
 import com.rabbitmq.client.Delivery
 import fs2.Stream
-import ru.delimobil.cabbit.algebra.ContentEncoding.decodeUtf8
+import ru.delimobil.cabbit.model.ContentEncoding.decodeUtf8
 import ru.delimobil.cabbit.algebra._
-import ru.delimobil.cabbit.config.declaration.Arguments
-import ru.delimobil.cabbit.config.declaration.AutoDeleteConfig
-import ru.delimobil.cabbit.config.declaration.BindDeclaration
-import ru.delimobil.cabbit.config.declaration.ExchangeDeclaration
-import ru.delimobil.cabbit.config.declaration.QueueDeclaration
+import ru.delimobil.cabbit.model.declaration.Arguments
+import ru.delimobil.cabbit.model.declaration.AutoDeleteConfig
+import ru.delimobil.cabbit.model.declaration.BindDeclaration
+import ru.delimobil.cabbit.model.declaration.ExchangeDeclaration
+import ru.delimobil.cabbit.model.declaration.QueueDeclaration
+import ru.delimobil.cabbit.model.ConsumerTag
+import ru.delimobil.cabbit.model.DeliveryTag
+import ru.delimobil.cabbit.model.ExchangeName
+import ru.delimobil.cabbit.model.QueueName
+import ru.delimobil.cabbit.model.RoutingKey
 
 import scala.concurrent.duration._
 import scala.reflect.ClassTag

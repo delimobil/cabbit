@@ -1,4 +1,4 @@
-package ru.delimobil.cabbit.algebra
+package ru.delimobil.cabbit.model
 
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream

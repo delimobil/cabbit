@@ -1,4 +1,4 @@
-package ru.delimobil.cabbit.algebra
+package ru.delimobil.cabbit.model
 
 final case class QueueName(name: String) extends AnyVal
 

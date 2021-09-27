@@ -1,7 +1,6 @@
-package ru.delimobil.cabbit.config
+package ru.delimobil.cabbit.model
 
 import com.rabbitmq.client.BuiltinExchangeType
-import ru.delimobil.cabbit.algebra._
 
 object declaration {
 
@@ -35,13 +34,15 @@ object declaration {
 
   type Arguments = Map[String, Any]
 
+  sealed trait Declaration
+
   case class QueueDeclaration(
     queueName: QueueName,
     durable: DurableConfig = DurableConfig.NonDurable,
     exclusive: ExclusiveConfig = ExclusiveConfig.Exclusive,
     autoDelete: AutoDeleteConfig = AutoDeleteConfig.AutoDelete,
     arguments: Arguments = Map.empty,
-  )
+  ) extends Declaration
 
   case class ExchangeDeclaration(
     exchangeName: ExchangeName,
@@ -50,7 +51,7 @@ object declaration {
     autoDelete: AutoDeleteConfig = AutoDeleteConfig.NonAutoDelete,
     internal: InternalConfig = InternalConfig.NonInternal,
     arguments: Arguments = Map.empty,
-  )
+  ) extends Declaration
 
   // AMQP-0-9-1 The server MUST, in each virtual host, pre-declare at least two direct exchange instances: one
   // named "amq.direct", the other with no public name that serves as a default exchange for Publish methods.
@@ -72,5 +73,5 @@ object declaration {
     exchangeName: ExchangeName,
     routingKey: RoutingKey,
     arguments: Arguments = Map.empty,
-  )
+  ) extends Declaration
 }

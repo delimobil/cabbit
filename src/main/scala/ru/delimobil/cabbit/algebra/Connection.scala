@@ -11,4 +11,6 @@ trait Connection[F[_]] extends ShutdownNotifier[F] {
   def createChannelConsumer: Resource[F, ChannelConsumer[F]]
 
   def createChannel: Resource[F, Channel[F]]
+
+  def close: F[Unit]
 }

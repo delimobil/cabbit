@@ -1,23 +1,28 @@
 package ru.delimobil.cabbit.client
 
-import cats.effect.Blocker
 import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
 import cats.effect.Resource
+import cats.effect.{Blocker => BlockerCE2}
 import com.rabbitmq.client
+import fs2.Stream
 import ru.delimobil.cabbit.algebra.Channel
 import ru.delimobil.cabbit.algebra.ChannelConsumer
 import ru.delimobil.cabbit.algebra.ChannelDeclaration
-import ru.delimobil.cabbit.algebra.ChannelOnPool
 import ru.delimobil.cabbit.algebra.ChannelPublisher
 import ru.delimobil.cabbit.algebra.Connection
-import ru.delimobil.cabbit.client.consumer.RabbitClientConsumerProvider
+import ru.delimobil.cabbit.ce.impl._
+import ru.delimobil.cabbit.client.poly.RabbitClientConsumerProvider
 
 private[client] final class RabbitClientConnection[F[_]: ConcurrentEffect: ContextShift](
   raw: client.Connection,
-  blocker: Blocker,
-  consumerProvider: RabbitClientConsumerProvider[F],
+  blockerCE2: BlockerCE2,
+  consumerProvider: RabbitClientConsumerProvider[F, Stream],
 ) extends Connection[F] {
+
+  private val blocker = new BlockerDelegate[F](blockerCE2)
+
+  private val delegate = new RabbitClientConnectionAction[F](raw, blocker)
 
   def createChannelDeclaration: Resource[F, ChannelDeclaration[F]] =
     createChannel
@@ -29,17 +34,11 @@ private[client] final class RabbitClientConnection[F[_]: ConcurrentEffect: Conte
     createChannel
 
   def createChannel: Resource[F, Channel[F]] =
-    createChannelOnPool.map(ch => new RabbitClientChannel[F](ch, consumerProvider))
+    Resource(delegate.createChannelOnPool).map(ch => new RabbitClientChannel(ch, consumerProvider))
+
+  def close: F[Unit] =
+    delegate.close
 
   def isOpen: F[Boolean] =
-    blocker.delay(raw.isOpen)
-
-  private def createChannelOnPool: Resource[F, ChannelOnPool[F]] =
-  // Doesn't use Resource.fromAutoCloseable because of custom error handler
-    Resource.make(blocker.delay(raw.createChannel()))(channel => blocker.delay(close(channel)))
-      .flatMap(channel => Resource.eval(RabbitClientChannelOnPool.make[F](channel, blocker)))
-
-  private def close(channel: client.Channel): Unit =
-    try { channel.close() }
-    catch { case _: client.AlreadyClosedException => () }
+    delegate.isOpen
 }

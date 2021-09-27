@@ -1,4 +1,4 @@
-package ru.delimobil.cabbit.config
+package ru.delimobil.cabbit.model
 
 import cats.data.NonEmptyList
 import cats.syntax.option._
@@ -6,7 +6,7 @@ import com.rabbitmq.client
 import com.rabbitmq.client.DefaultSaslConfig
 import com.rabbitmq.client.SaslConfig
 import javax.net.ssl.SSLContext
-import ru.delimobil.cabbit.config.CabbitConfig._
+import ru.delimobil.cabbit.model.CabbitConfig.CabbitNodeConfig
 
 import scala.concurrent.duration.FiniteDuration
 

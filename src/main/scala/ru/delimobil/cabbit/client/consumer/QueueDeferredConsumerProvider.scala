@@ -13,9 +13,10 @@ import com.rabbitmq.client.Envelope
 import com.rabbitmq.client.ShutdownSignalException
 import fs2.Stream
 import fs2.concurrent.Queue
+import ru.delimobil.cabbit.client.poly.RabbitClientConsumerProvider
 
 private[client] final class QueueDeferredConsumerProvider[F[_]: ConcurrentEffect]
-  extends RabbitClientConsumerProvider[F] {
+  extends RabbitClientConsumerProvider[F, Stream] {
 
   def provide(prefetchCount: Int): F[(Consumer, Stream[F, Delivery])] =
     Queue
@@ -29,13 +30,13 @@ private[client] final class QueueDeferredConsumerProvider[F[_]: ConcurrentEffect
       def handleConsumeOk(consumerTag: String): Unit = {}
 
       def handleCancelOk(consumerTag: String): Unit =
-        deferred.complete(().asRight)
+        deferred.complete(().asRight).toIO.unsafeRunSync()
 
       def handleCancel(consumerTag: String): Unit =
-        deferred.complete(().asRight)
+        deferred.complete(().asRight).toIO.unsafeRunSync()
 
       def handleShutdownSignal(consumerTag: String, sig: ShutdownSignalException): Unit =
-        deferred.complete(sig.asLeft)
+        deferred.complete(sig.asLeft).toIO.unsafeRunSync()
 
       def handleRecoverOk(consumerTag: String): Unit = {}
 

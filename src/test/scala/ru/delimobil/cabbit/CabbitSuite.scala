@@ -13,30 +13,34 @@ import cats.effect.Timer
 import cats.effect.syntax.concurrent._
 import cats.effect.syntax.effect._
 import cats.syntax.apply._
-import cats.syntax.either._
 import cats.syntax.flatMap._
 import cats.syntax.foldable._
 import cats.syntax.functor._
 import cats.syntax.semigroupal._
 import com.rabbitmq.client.AMQP.Queue.DeclareOk
 import com.rabbitmq.client.GetResponse
+import com.rabbitmq.client.ShutdownSignalException
 import fs2.Stream
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
-import ru.delimobil.cabbit.algebra.ContentEncoding._
+import ru.delimobil.cabbit.CollectionConverters._
 import ru.delimobil.cabbit.algebra._
-import ru.delimobil.cabbit.config.declaration.Arguments
-import ru.delimobil.cabbit.config.declaration.BindDeclaration
-import ru.delimobil.cabbit.config.declaration.QueueDeclaration
+import ru.delimobil.cabbit.model.ContentEncoding._
+import ru.delimobil.cabbit.model.DeliveryTag
+import ru.delimobil.cabbit.model.ExchangeName
+import ru.delimobil.cabbit.model.QueueName
+import ru.delimobil.cabbit.model.RoutingKey
+import ru.delimobil.cabbit.model.declaration.Arguments
+import ru.delimobil.cabbit.model.declaration.BindDeclaration
+import ru.delimobil.cabbit.model.declaration.QueueDeclaration
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.Random
-import scala.util.chaining._
 
 class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
-  import ru.delimobil.cabbit.algebra.BodyEncoder.instances.textUtf8
+  import ru.delimobil.cabbit.model.BodyEncoder.instances.textUtf8
 
   private type CheckGetFunc = Kleisli[IO, QueueName, GetResponse]
 
@@ -55,6 +59,9 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   private var closeIO: IO[Unit] = _
 
   private def messagesN(n: Int) = (1 to n).map(i => s"hello from cabbit-$i").toList
+
+  private def tupled[T1, T2](io1: Resource[IO, T1], io2: Resource[IO, T2]) =
+    io1.flatMap(t1 => io2.map(t2 => (t1, t2)))
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
@@ -204,8 +211,8 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
       for {
         stream <- channel.deliveryStream(qName, 1).map(_._2)
         _ <- channel.queueDelete(qName)
-        deliveriesEither <- IO.race(stream.compile.toList, IO.sleep(300.millis))
-        _ = assert(deliveriesEither == List.empty.asLeft)
+        deliveriesEither <- stream.compile.toList.timeout(300.millis)
+        _ = assert(deliveriesEither == List.empty)
       } yield {}
     }
   }
@@ -213,7 +220,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   test("two exclusive queues on one connection should work") {
     container
       .makeConnection[IO](blocker)
-      .flatMap(conn => (conn.createChannelDeclaration, conn.createChannelDeclaration).tupled)
+      .flatMap(conn => tupled(conn.createChannelDeclaration, conn.createChannelDeclaration))
       .use { case (channel1, channel2) =>
         rabbitUtils.declareExclusive(channel1, channel2)
           .map { case (result1, result2) => assert(result1.isRight && result2.isRight) }
@@ -222,10 +229,9 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("only one of two exclusive queues on different connections should work") {
-    val connRes = container.makeConnection[IO](blocker).mproduct(_.createChannelDeclaration)
+    val connRes = container.makeConnection[IO](blocker).flatMap(c => c.createChannelDeclaration.map((c, _)))
 
-    (connRes, connRes)
-      .tupled
+    tupled(connRes, connRes)
       .use { case ((conn1, channel1), (conn2, channel2)) =>
         rabbitUtils.declareExclusive(channel1, channel2)
           .product((channel1.isOpen, channel2.isOpen, conn1.isOpen, conn2.isOpen).tupled)
@@ -241,7 +247,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   test("ten thousand requeues") {
     val messages = (1 to 100).map(i => s"hello from cabbit-$i").toList
     val expected = List.fill(200)(messages.take(50)).flatten
-    val amount = 10_000
+    val amount = 10000
 
     rabbitUtils.useQueueDeclared(Map.empty) { qName =>
       messages
@@ -381,14 +387,15 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     }
   }
 
-  test("Stream completes on rabbitmq shutdown") {
-    rabbitUtils.useQueueDeclared(Map.empty) { qName =>
-      for {
-        stream <- channel.deliveryStream(qName, 1).map(_._2)
-        _ <- shutdownIO
-        deliveriesEither <- IO.race(stream.compile.toList, IO.sleep(300.millis))
-        _ = assert(deliveriesEither == List.empty.asLeft)
-      } yield {}
+  test("Stream throws on rabbitmq shutdown") {
+    intercept[ShutdownSignalException] {
+      rabbitUtils.useQueueDeclared(Map.empty) { qName =>
+        channel
+          .deliveryStream(qName, 1).map(_._2)
+          .productL(shutdownIO)
+          .flatMap(stream => stream.compile.toList.timeout(300.millis))
+          .void
+      }
     }
   }
 

@@ -10,11 +10,11 @@ import pureconfig.ConfigReader
 import pureconfig.ConfigSource
 import pureconfig.generic.auto._
 import pureconfig.module.cats._
-import ru.delimobil.cabbit.algebra.ExchangeName
-import ru.delimobil.cabbit.algebra.QueueName
-import ru.delimobil.cabbit.config.CabbitConfig
-import ru.delimobil.cabbit.config.CabbitConfig.CabbitNodeConfig
-import ru.delimobil.cabbit.config.declaration._
+import ru.delimobil.cabbit.model.CabbitConfig.CabbitNodeConfig
+import ru.delimobil.cabbit.model.CabbitConfig
+import ru.delimobil.cabbit.model.declaration._
+import ru.delimobil.cabbit.model.ExchangeName
+import ru.delimobil.cabbit.model.QueueName
 
 import scala.concurrent.duration._
 

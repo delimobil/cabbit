@@ -1,4 +1,4 @@
-package ru.delimobil.cabbit.algebra
+package ru.delimobil.cabbit.model
 
 final case class ExchangeName(name: String) extends AnyVal
 

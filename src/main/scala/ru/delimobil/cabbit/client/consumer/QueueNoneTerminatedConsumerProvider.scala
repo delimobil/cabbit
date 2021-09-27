@@ -15,9 +15,10 @@ import com.rabbitmq.client.ShutdownSignalException
 import fs2.Stream
 import fs2.concurrent.NoneTerminatedQueue
 import fs2.concurrent.Queue
+import ru.delimobil.cabbit.client.poly.RabbitClientConsumerProvider
 
 private[client] final class QueueNoneTerminatedConsumerProvider[F[_]: ConcurrentEffect]
-  extends RabbitClientConsumerProvider[F] {
+  extends RabbitClientConsumerProvider[F, Stream] {
 
   def provide(prefetchCount: Int): F[(Consumer, Stream[F, Delivery])] =
     Queue
