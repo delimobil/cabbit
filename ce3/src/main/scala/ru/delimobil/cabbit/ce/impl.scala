@@ -9,7 +9,8 @@ import ru.delimobil.cabbit.ce.api._
 
 object impl {
 
-  final class SemaphoreDelegate[F[_]: MonadCancel[*[_], Throwable]](sem: SemaphoreCE3[F])
+  //   [F[_]: MonadCancel[*[_], Throwable]] this one didn't compile for scala 3
+  final class SemaphoreDelegate[F[_]](sem: SemaphoreCE3[F])(implicit c: MonadCancel[F, Throwable])
       extends Semaphore[F] {
     def withPermit[V](action: F[V]): F[V] =
       sem.permit.use(_ => action)

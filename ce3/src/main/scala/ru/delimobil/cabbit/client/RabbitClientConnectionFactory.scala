@@ -3,7 +3,7 @@ package ru.delimobil.cabbit.client
 import cats.effect.Resource
 import cats.effect.kernel.Async
 import cats.effect.kernel.Sync
-import cats.syntax.all._
+import cats.syntax.functor._
 import com.rabbitmq.client
 import ru.delimobil.cabbit.CollectionConverters._
 import ru.delimobil.cabbit.algebra.Connection

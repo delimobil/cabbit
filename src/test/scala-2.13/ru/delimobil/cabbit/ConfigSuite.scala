@@ -1,7 +1,7 @@
 package ru.delimobil.cabbit
 
 import cats.data.NonEmptyList
-import cats.syntax.all._
+import cats.syntax.either._
 import com.rabbitmq.client.BuiltinExchangeType
 import com.typesafe.config.ConfigFactory.parseString
 import com.typesafe.config.ConfigValue

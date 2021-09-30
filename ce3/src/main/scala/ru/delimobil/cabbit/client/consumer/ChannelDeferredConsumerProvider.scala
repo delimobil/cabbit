@@ -4,7 +4,9 @@ import cats.effect.kernel.Async
 import cats.effect.kernel.Deferred
 import cats.effect.kernel.Resource
 import cats.effect.std.Dispatcher
-import cats.syntax.all._
+import cats.syntax.either._
+import cats.syntax.functor._
+import cats.syntax.semigroupal._
 import com.rabbitmq.client.AMQP
 import com.rabbitmq.client.Consumer
 import com.rabbitmq.client.Delivery

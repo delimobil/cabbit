@@ -18,7 +18,7 @@ val shared = (project in file("shared"))
   )
 
 val commonSettings = Seq(
-  version := "0.0.16",
+  version := "0.0.17",
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((3, _)) =>
@@ -69,7 +69,7 @@ val root = (project in file("."))
   .dependsOn(shared)
   .settings(commonSettings)
   .settings(
-    name := "cabbit-ce2",
+    name := "cabbit_ce2",
     libraryDependencies += "co.fs2" %% "fs2-core" % fs2VersionCE2,
   )
 
