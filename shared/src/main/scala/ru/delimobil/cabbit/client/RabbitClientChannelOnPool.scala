@@ -8,10 +8,10 @@ import ru.delimobil.cabbit.ce.api.Blocker
 import ru.delimobil.cabbit.ce.api.Semaphore
 import ru.delimobil.cabbit.ce.api.SemaphoreMake
 
-private[client] final class RabbitClientChannelOnPool[F[_]] (
-  semaphore: Semaphore[F],
-  channel: client.Channel,
-  blocker: Blocker[F]
+private[client] final class RabbitClientChannelOnPool[F[_]](
+    semaphore: Semaphore[F],
+    channel: client.Channel,
+    blocker: Blocker[F]
 ) extends ChannelOnPool[F] {
 
   def delay[V](f: client.Channel => V): F[V] =
@@ -24,12 +24,15 @@ private[client] final class RabbitClientChannelOnPool[F[_]] (
     semaphore.withPermit(blocker.delay(closeUnsafe()))
 
   private def closeUnsafe(): Unit =
-    try { channel.close() }
+    try channel.close()
     catch { case _: client.AlreadyClosedException => () }
 }
 
 private[client] object RabbitClientChannelOnPool {
 
-  def make[F[_]: SemaphoreMake: Functor](channel: client.Channel, blocker: Blocker[F]): F[ChannelOnPool[F]] =
+  def make[F[_]: SemaphoreMake: Functor](
+      channel: client.Channel,
+      blocker: Blocker[F]
+  ): F[ChannelOnPool[F]] =
     SemaphoreMake[F].make(1).map(new RabbitClientChannelOnPool[F](_, channel, blocker))
 }

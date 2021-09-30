@@ -9,7 +9,8 @@ import ru.delimobil.cabbit.ce.api._
 
 object impl {
 
-  final class SemaphoreDelegate[F[_]: MonadCancel[*[_], Throwable]](sem: SemaphoreCE3[F]) extends Semaphore[F] {
+  final class SemaphoreDelegate[F[_]: MonadCancel[*[_], Throwable]](sem: SemaphoreCE3[F])
+      extends Semaphore[F] {
     def withPermit[V](action: F[V]): F[V] =
       sem.permit.use(_ => action)
   }

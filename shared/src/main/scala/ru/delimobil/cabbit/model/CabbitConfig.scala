@@ -12,12 +12,12 @@ import scala.concurrent.duration.FiniteDuration
 
 /** @param automaticRecovery <a href="https://www.rabbitmq.com/api-guide.html#recovery"> */
 case class CabbitConfig(
-  nodes: NonEmptyList[CabbitNodeConfig],
-  virtualHost: String,
-  connectionTimeout: FiniteDuration,
-  username: Option[String],
-  password: Option[String],
-  automaticRecovery: Boolean = true
+    nodes: NonEmptyList[CabbitNodeConfig],
+    virtualHost: String,
+    connectionTimeout: FiniteDuration,
+    username: Option[String],
+    password: Option[String],
+    automaticRecovery: Boolean = true
 )
 
 object CabbitConfig {
@@ -33,7 +33,11 @@ object CabbitConfig {
     def addresses: List[client.Address] =
       config.nodes.map(node => new client.Address(node.host, node.port)).toList
 
-    def factory(ssl: Boolean, context: Option[SSLContext], saslConfig: SaslConfig): client.ConnectionFactory = {
+    def factory(
+        ssl: Boolean,
+        context: Option[SSLContext],
+        saslConfig: SaslConfig
+    ): client.ConnectionFactory = {
       val factory = new client.ConnectionFactory()
 
       val firstNode = config.nodes.head

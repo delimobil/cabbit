@@ -15,15 +15,19 @@ import ru.delimobil.cabbit.client.poly.RabbitClientConsumerProvider
 import ru.delimobil.cabbit.CollectionConverters._
 
 private[cabbit] final class RabbitClientConnectionFactory[F[_]: ConcurrentEffect: ContextShift](
-  blocker: BlockerCE2,
-  factory: client.ConnectionFactory
+    blocker: BlockerCE2,
+    factory: client.ConnectionFactory
 ) extends ConnectionFactory[F] {
 
-  private val consumerProvider: RabbitClientConsumerProvider[F, Stream] = new QueueDeferredConsumerProvider[F]
+  private val consumerProvider: RabbitClientConsumerProvider[F, Stream] =
+    new QueueDeferredConsumerProvider[F]
 
-  def newConnection(addresses: List[client.Address], appName: Option[String] = None): Resource[F, Connection[F]] =
+  def newConnection(
+      addresses: List[client.Address],
+      appName: Option[String] = None
+  ): Resource[F, Connection[F]] =
     blocker
       .delay(factory.newConnection(addresses.asJava, appName.orNull))
-      .map(new RabbitClientConnection[F](_ , blocker, consumerProvider))
+      .map(new RabbitClientConnection[F](_, blocker, consumerProvider))
       .pipe(Resource.make(_)(_.close))
 }

@@ -13,8 +13,8 @@ import ru.delimobil.cabbit.ce.impl._
 import ru.delimobil.cabbit.client.poly.RabbitClientConsumerProvider
 
 private[client] final class RabbitClientConnection[F[_]: Async](
-  raw: client.Connection,
-  consumerProvider: RabbitClientConsumerProvider[F, Stream],
+    raw: client.Connection,
+    consumerProvider: RabbitClientConsumerProvider[F, Stream]
 ) extends Connection[F] {
 
   private val blocker = new BlockerDelegate[F]

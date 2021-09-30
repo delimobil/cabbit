@@ -10,8 +10,8 @@ import ru.delimobil.cabbit.model.CabbitConfig
 object ConnectionFactoryProvider {
 
   def provide[F[_]: Async](
-    config: CabbitConfig,
-    context: Option[SSLContext]
+      config: CabbitConfig,
+      context: Option[SSLContext]
   ): ConnectionFactory[F] =
     provide(context.fold(config.factoryDefaultSsl)(config.factoryExternalSsl))
 

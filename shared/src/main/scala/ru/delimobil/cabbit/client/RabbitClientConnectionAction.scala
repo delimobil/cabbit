@@ -9,8 +9,8 @@ import ru.delimobil.cabbit.ce.api.Blocker
 import ru.delimobil.cabbit.ce.api.SemaphoreMake
 
 private[client] final class RabbitClientConnectionAction[F[_]: Monad: SemaphoreMake](
-  raw: client.Connection,
-  blocker: Blocker[F]
+    raw: client.Connection,
+    blocker: Blocker[F]
 ) {
 
   def close: F[Unit] =
@@ -26,6 +26,6 @@ private[client] final class RabbitClientConnectionAction[F[_]: Monad: SemaphoreM
       .fproduct(_.close)
 
   private def closeUnsafe(): Unit =
-    try { raw.close() }
+    try raw.close()
     catch { case _: client.AlreadyClosedException => () }
 }

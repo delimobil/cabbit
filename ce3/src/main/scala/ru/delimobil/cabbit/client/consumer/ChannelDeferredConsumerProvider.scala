@@ -15,19 +15,25 @@ import fs2.concurrent.Channel
 import ru.delimobil.cabbit.client.poly.RabbitClientConsumerProvider
 
 private[client] final class ChannelDeferredConsumerProvider[F[_]: Async](
-  dispatcher: Dispatcher[F]
+    dispatcher: Dispatcher[F]
 ) extends RabbitClientConsumerProvider[F, Stream] {
 
   def provide(prefetchCount: Int): F[(Consumer, Stream[F, Delivery])] =
     Channel
       .bounded[F, Delivery](prefetchCount)
       .product(Deferred[F, Either[Throwable, Unit]])
-      .map { case (channel, deferred) => (consumer(channel, deferred), channel.stream.interruptWhen(deferred)) }
+      .map { case (channel, deferred) =>
+        (consumer(channel, deferred), channel.stream.interruptWhen(deferred))
+      }
 
-  private def consumer(channel: Channel[F, Delivery], deferred: Deferred[F, Either[Throwable, Unit]]): Consumer = {
-    def propagate(sig: ShutdownSignalException): Unit = dispatcher.unsafeRunSync(deferred.complete(sig.asLeft))
+  private def consumer(
+      channel: Channel[F, Delivery],
+      deferred: Deferred[F, Either[Throwable, Unit]]
+  ): Consumer = {
     def close(): Unit = dispatcher.unsafeRunSync(channel.close)
     def send(delivery: Delivery): Unit = dispatcher.unsafeRunSync(channel.send(delivery))
+    def raise(sig: ShutdownSignalException): Unit =
+      dispatcher.unsafeRunSync(deferred.complete(sig.asLeft))
 
     new Consumer {
 
@@ -40,15 +46,15 @@ private[client] final class ChannelDeferredConsumerProvider[F[_]: Async](
         close()
 
       def handleShutdownSignal(consumerTag: String, sig: ShutdownSignalException): Unit =
-        propagate(sig)
+        raise(sig)
 
       def handleRecoverOk(consumerTag: String): Unit = {}
 
       def handleDelivery(
-        consumerTag: String,
-        envelope: Envelope,
-        properties: AMQP.BasicProperties,
-        body: Array[Byte]
+          consumerTag: String,
+          envelope: Envelope,
+          properties: AMQP.BasicProperties,
+          body: Array[Byte]
       ): Unit = send(new Delivery(envelope, properties, body))
     }
   }

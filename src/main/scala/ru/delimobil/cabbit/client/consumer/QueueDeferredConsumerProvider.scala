@@ -18,18 +18,24 @@ import fs2.concurrent.Queue
 import ru.delimobil.cabbit.client.poly.RabbitClientConsumerProvider
 
 private[client] final class QueueDeferredConsumerProvider[F[_]: ConcurrentEffect]
-  extends RabbitClientConsumerProvider[F, Stream] {
+    extends RabbitClientConsumerProvider[F, Stream] {
 
   def provide(prefetchCount: Int): F[(Consumer, Stream[F, Delivery])] =
     Queue
       .boundedNoneTerminated[F, Delivery](prefetchCount)
       .product(Deferred[F, Either[Throwable, Unit]])
-      .map { case (queue, deferred) => (consumer(queue, deferred), queue.dequeue.interruptWhen(deferred)) }
+      .map { case (queue, deferred) =>
+        (consumer(queue, deferred), queue.dequeue.interruptWhen(deferred))
+      }
 
-  private def consumer(queue: NoneTerminatedQueue[F, Delivery], deferred: Deferred[F, Either[Throwable, Unit]]): Consumer = {
-    def propagate(sig: ShutdownSignalException): Unit = deferred.complete(sig.asLeft).toIO.unsafeRunSync()
+  private def consumer(
+      queue: NoneTerminatedQueue[F, Delivery],
+      deferred: Deferred[F, Either[Throwable, Unit]]
+  ): Consumer = {
     def close(): Unit = queue.enqueue1(none).toIO.unsafeRunSync()
     def send(delivery: Delivery): Unit = queue.enqueue1(delivery.some).toIO.unsafeRunSync()
+    def raise(sig: ShutdownSignalException): Unit =
+      deferred.complete(sig.asLeft).toIO.unsafeRunSync()
 
     new Consumer {
 
@@ -42,15 +48,15 @@ private[client] final class QueueDeferredConsumerProvider[F[_]: ConcurrentEffect
         close()
 
       def handleShutdownSignal(consumerTag: String, sig: ShutdownSignalException): Unit =
-        propagate(sig)
+        raise(sig)
 
       def handleRecoverOk(consumerTag: String): Unit = {}
 
       def handleDelivery(
-        consumerTag: String,
-        envelope: Envelope,
-        properties: AMQP.BasicProperties,
-        body: Array[Byte]
+          consumerTag: String,
+          envelope: Envelope,
+          properties: AMQP.BasicProperties,
+          body: Array[Byte]
       ): Unit = send(new Delivery(envelope, properties, body))
     }
   }

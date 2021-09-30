@@ -10,25 +10,25 @@ import ru.delimobil.cabbit.model.RoutingKey
 trait ChannelPublisher[F[_]] extends ShutdownNotifier[F] {
 
   def basicPublishDirect[V](
-    queueName: QueueName,
-    body: V,
-    mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
-    properties: BasicProperties = new BasicProperties(),
+      queueName: QueueName,
+      body: V,
+      mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
+      properties: BasicProperties = new BasicProperties()
   )(implicit encoder: BodyEncoder[V]): F[Unit]
 
   def basicPublishFanout[V](
-    exchangeName: ExchangeName,
-    body: V,
-    mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
-    properties: BasicProperties = new BasicProperties(),
+      exchangeName: ExchangeName,
+      body: V,
+      mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
+      properties: BasicProperties = new BasicProperties()
   )(implicit encoder: BodyEncoder[V]): F[Unit]
 
   def basicPublish[V](
-    exchangeName: ExchangeName,
-    routingKey: RoutingKey,
-    body: V,
-    mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
-    properties: BasicProperties = new BasicProperties(),
+      exchangeName: ExchangeName,
+      routingKey: RoutingKey,
+      body: V,
+      mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
+      properties: BasicProperties = new BasicProperties()
   )(implicit encoder: BodyEncoder[V]): F[Unit]
 }
 

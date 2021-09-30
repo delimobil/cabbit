@@ -7,6 +7,7 @@ import ru.delimobil.cabbit.algebra.ChannelOnPool
 import ru.delimobil.cabbit.client.poly.RabbitClientConsumerProvider
 
 private[client] final class RabbitClientChannel[F[_]: FlatMap](
-  channel: ChannelOnPool[F],
-  consumerProvider: RabbitClientConsumerProvider[F, Stream]
-) extends poly.RabbitClientChannel[F, Stream](channel, consumerProvider) with Channel[F]
+    channel: ChannelOnPool[F],
+    consumerProvider: RabbitClientConsumerProvider[F, Stream]
+) extends poly.RabbitClientChannel[F, Stream](channel, consumerProvider)
+    with Channel[F]

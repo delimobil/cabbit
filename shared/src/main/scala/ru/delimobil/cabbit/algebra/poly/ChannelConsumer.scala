@@ -10,9 +10,9 @@ private[cabbit] trait ChannelConsumer[F[_], Stream[*[_], _]] extends ChannelAcke
   def basicQos(prefetchCount: Int): F[Unit]
 
   def basicConsume(
-    queue: QueueName,
-    deliverCallback: client.DeliverCallback,
-    cancelCallback: client.CancelCallback
+      queue: QueueName,
+      deliverCallback: client.DeliverCallback,
+      cancelCallback: client.CancelCallback
   ): F[ConsumerTag]
 
   def basicConsume(queue: QueueName, callback: client.Consumer): F[ConsumerTag]
@@ -20,8 +20,8 @@ private[cabbit] trait ChannelConsumer[F[_], Stream[*[_], _]] extends ChannelAcke
   def basicGet(queue: QueueName, autoAck: Boolean): F[client.GetResponse]
 
   def deliveryStream(
-    queue: QueueName,
-    prefetchCount: Int
+      queue: QueueName,
+      prefetchCount: Int
   ): F[(ConsumerTag, Stream[F, client.Delivery])]
 
   def basicCancel(consumerTag: ConsumerTag): F[Unit]

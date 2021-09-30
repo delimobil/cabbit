@@ -48,9 +48,8 @@ object ContentEncoding {
     while ({
       len = gzipInputStream.read(buffer)
       len > 0
-    }) {
+    })
       byteOutputStream.write(buffer, 0, len)
-    }
     val bytes = byteOutputStream.toByteArray
     byteOutputStream.close()
     bytes

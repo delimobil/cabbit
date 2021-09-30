@@ -23,7 +23,9 @@ object BodyEncoder {
       props
         .builder()
         .contentType(Option(props.getContentType).filter(_.nonEmpty).getOrElse(contentType.raw))
-        .contentEncoding(Option(props.getContentEncoding).filter(_.nonEmpty).getOrElse(contentEncoding.raw))
+        .contentEncoding(
+          Option(props.getContentEncoding).filter(_.nonEmpty).getOrElse(contentEncoding.raw)
+        )
         .build()
   }
 

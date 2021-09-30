@@ -21,7 +21,7 @@ object declaration {
   final case class AutoDeleteConfig(bool: Boolean) extends AnyVal
 
   object AutoDeleteConfig {
-    val AutoDelete: AutoDeleteConfig =  AutoDeleteConfig(true)
+    val AutoDelete: AutoDeleteConfig = AutoDeleteConfig(true)
     val NonAutoDelete: AutoDeleteConfig = AutoDeleteConfig(false)
   }
 
@@ -37,20 +37,20 @@ object declaration {
   sealed trait Declaration
 
   case class QueueDeclaration(
-    queueName: QueueName,
-    durable: DurableConfig = DurableConfig.NonDurable,
-    exclusive: ExclusiveConfig = ExclusiveConfig.Exclusive,
-    autoDelete: AutoDeleteConfig = AutoDeleteConfig.AutoDelete,
-    arguments: Arguments = Map.empty,
+      queueName: QueueName,
+      durable: DurableConfig = DurableConfig.NonDurable,
+      exclusive: ExclusiveConfig = ExclusiveConfig.Exclusive,
+      autoDelete: AutoDeleteConfig = AutoDeleteConfig.AutoDelete,
+      arguments: Arguments = Map.empty
   ) extends Declaration
 
   case class ExchangeDeclaration(
-    exchangeName: ExchangeName,
-    exchangeType: BuiltinExchangeType,
-    durable: DurableConfig = DurableConfig.NonDurable,
-    autoDelete: AutoDeleteConfig = AutoDeleteConfig.NonAutoDelete,
-    internal: InternalConfig = InternalConfig.NonInternal,
-    arguments: Arguments = Map.empty,
+      exchangeName: ExchangeName,
+      exchangeType: BuiltinExchangeType,
+      durable: DurableConfig = DurableConfig.NonDurable,
+      autoDelete: AutoDeleteConfig = AutoDeleteConfig.NonAutoDelete,
+      internal: InternalConfig = InternalConfig.NonInternal,
+      arguments: Arguments = Map.empty
   ) extends Declaration
 
   // AMQP-0-9-1 The server MUST, in each virtual host, pre-declare at least two direct exchange instances: one
@@ -69,9 +69,9 @@ object declaration {
   }
 
   case class BindDeclaration(
-    queueName: QueueName,
-    exchangeName: ExchangeName,
-    routingKey: RoutingKey,
-    arguments: Arguments = Map.empty,
+      queueName: QueueName,
+      exchangeName: ExchangeName,
+      routingKey: RoutingKey,
+      arguments: Arguments = Map.empty
   ) extends Declaration
 }

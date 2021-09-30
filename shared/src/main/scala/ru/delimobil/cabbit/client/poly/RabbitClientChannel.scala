@@ -26,17 +26,19 @@ import ru.delimobil.cabbit.model.declaration.QueueDeclaration
 import ru.delimobil.cabbit.CollectionConverters._
 
 private[client] class RabbitClientChannel[F[_]: FlatMap, Stream[*[_], _]](
-  channel: ChannelOnPool[F],
-  consumerProvider: RabbitClientConsumerProvider[F, Stream]
-) extends ChannelDeclaration[F] with ChannelPublisher[F] with ChannelConsumer[F, Stream] {
+    channel: ChannelOnPool[F],
+    consumerProvider: RabbitClientConsumerProvider[F, Stream]
+) extends ChannelDeclaration[F]
+    with ChannelPublisher[F]
+    with ChannelConsumer[F, Stream] {
 
   def basicQos(prefetchCount: Int): F[Unit] =
     channel.delay(_.basicQos(prefetchCount))
 
   def basicConsume(
-    queue: QueueName,
-    deliverCallback: client.DeliverCallback,
-    cancelCallback: client.CancelCallback
+      queue: QueueName,
+      deliverCallback: client.DeliverCallback,
+      cancelCallback: client.CancelCallback
   ): F[ConsumerTag] =
     channel.delay(_.basicConsume(queue.name, deliverCallback, cancelCallback)).map(ConsumerTag(_))
 
@@ -47,8 +49,8 @@ private[client] class RabbitClientChannel[F[_]: FlatMap, Stream[*[_], _]](
     channel.delay(_.basicGet(queue.name, autoAck))
 
   def deliveryStream(
-    queueName: QueueName,
-    prefetchCount: Int
+      queueName: QueueName,
+      prefetchCount: Int
   ): F[(ConsumerTag, Stream[F, client.Delivery])] =
     basicQos(prefetchCount)
       .productR(consumerProvider.provide(prefetchCount))
@@ -73,7 +75,7 @@ private[client] class RabbitClientChannel[F[_]: FlatMap, Stream[*[_], _]](
         queueDeclaration.durable.bool,
         queueDeclaration.exclusive.bool,
         queueDeclaration.autoDelete.bool,
-        queueDeclaration.arguments.asJava,
+        queueDeclaration.arguments.asJava
       )
     }
 
@@ -85,7 +87,7 @@ private[client] class RabbitClientChannel[F[_]: FlatMap, Stream[*[_], _]](
         exchangeDeclaration.durable.bool,
         exchangeDeclaration.autoDelete.bool,
         exchangeDeclaration.internal.bool,
-        exchangeDeclaration.arguments.asJava,
+        exchangeDeclaration.arguments.asJava
       )
     }
 
@@ -95,15 +97,15 @@ private[client] class RabbitClientChannel[F[_]: FlatMap, Stream[*[_], _]](
         bindDeclaration.queueName.name,
         bindDeclaration.exchangeName.name,
         bindDeclaration.routingKey.name,
-        bindDeclaration.arguments.asJava,
+        bindDeclaration.arguments.asJava
       )
     }
 
   def declare(declaration: Declaration): F[Method] =
     declaration match {
-      case queue: QueueDeclaration => queueDeclare(queue).widen[Method]
+      case queue: QueueDeclaration       => queueDeclare(queue).widen[Method]
       case exchange: ExchangeDeclaration => exchangeDeclare(exchange).widen[Method]
-      case bind: BindDeclaration => queueBind(bind).widen[Method]
+      case bind: BindDeclaration         => queueBind(bind).widen[Method]
     }
 
   def queueUnbind(bind: BindDeclaration): F[Queue.UnbindOk] =
@@ -116,30 +118,38 @@ private[client] class RabbitClientChannel[F[_]: FlatMap, Stream[*[_], _]](
     channel.delay(_.exchangeDelete(exchangeName.name))
 
   def basicPublishDirect[V](
-    queueName: QueueName,
-    body: V,
-    mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
-    properties: BasicProperties = new BasicProperties(),
+      queueName: QueueName,
+      body: V,
+      mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
+      properties: BasicProperties = new BasicProperties()
   )(implicit encoder: BodyEncoder[V]): F[Unit] =
     basicPublish(ExchangeName.default, RoutingKey(queueName.name), body, mandatory, properties)
 
   def basicPublishFanout[V](
-    exchangeName: ExchangeName,
-    body: V,
-    mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
-    properties: BasicProperties = new BasicProperties(),
+      exchangeName: ExchangeName,
+      body: V,
+      mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
+      properties: BasicProperties = new BasicProperties()
   )(implicit encoder: BodyEncoder[V]): F[Unit] =
     basicPublish(exchangeName, RoutingKey.default, body, mandatory, properties)
 
   def basicPublish[V](
-    exchangeName: ExchangeName,
-    routingKey: RoutingKey,
-    body: V,
-    mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
-    properties: BasicProperties = new BasicProperties(),
+      exchangeName: ExchangeName,
+      routingKey: RoutingKey,
+      body: V,
+      mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
+      properties: BasicProperties = new BasicProperties()
   )(implicit encoder: BodyEncoder[V]): F[Unit] = {
     val props = encoder.alterProps(properties)
-    channel.delay(_.basicPublish(exchangeName.name, routingKey.name, mandatory.bool, props, encoder.encode(body)))
+    channel.delay(
+      _.basicPublish(
+        exchangeName.name,
+        routingKey.name,
+        mandatory.bool,
+        props,
+        encoder.encode(body)
+      )
+    )
   }
 
   def delay[V](f: client.Channel => V): F[V] =

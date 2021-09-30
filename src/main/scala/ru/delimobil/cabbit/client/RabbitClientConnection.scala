@@ -15,9 +15,9 @@ import ru.delimobil.cabbit.ce.impl._
 import ru.delimobil.cabbit.client.poly.RabbitClientConsumerProvider
 
 private[client] final class RabbitClientConnection[F[_]: ConcurrentEffect: ContextShift](
-  raw: client.Connection,
-  blockerCE2: BlockerCE2,
-  consumerProvider: RabbitClientConsumerProvider[F, Stream],
+    raw: client.Connection,
+    blockerCE2: BlockerCE2,
+    consumerProvider: RabbitClientConsumerProvider[F, Stream]
 ) extends Connection[F] {
 
   private val blocker = new BlockerDelegate[F](blockerCE2)
