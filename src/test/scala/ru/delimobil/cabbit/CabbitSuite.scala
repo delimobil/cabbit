@@ -60,7 +60,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
   private def messagesN(n: Int) = (1 to n).map(i => s"hello from cabbit-$i").toList
 
-  private def tupled[T1, T2](io1: Resource[IO, T1], io2: Resource[IO, T2]) =
+  private def tupled[T1, T2](io1: Resource[IO, T1], io2: Resource[IO, T2]): Resource[IO, (T1, T2)] = // for scala 2.12
     io1.flatMap(t1 => io2.map(t2 => (t1, t2)))
 
   override protected def beforeAll(): Unit = {

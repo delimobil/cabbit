@@ -1,6 +1,5 @@
 package ru.delimobil.cabbit.ce
 
-
 import cats.effect.Concurrent
 import cats.effect.ContextShift
 import cats.effect.Sync
