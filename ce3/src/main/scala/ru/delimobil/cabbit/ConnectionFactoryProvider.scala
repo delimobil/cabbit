@@ -10,10 +10,10 @@ import ru.delimobil.cabbit.model.CabbitConfig
 object ConnectionFactoryProvider {
 
   def provide[F[_]: Async](
-      config: CabbitConfig,
-      context: Option[SSLContext]
+    config: CabbitConfig,
+    sslContext: Option[SSLContext]
   ): ConnectionFactory[F] =
-    provide(context.fold(config.factoryDefaultSsl)(config.factoryExternalSsl))
+    provide(sslContext.fold(config.factoryDefaultSsl)(config.factoryExternalSsl))
 
   def provide[F[_]: Async](factory: JConnectionFactory): ConnectionFactory[F] =
     new RabbitClientConnectionFactory[F](factory)

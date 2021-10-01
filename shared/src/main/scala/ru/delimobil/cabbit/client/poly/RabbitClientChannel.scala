@@ -9,10 +9,11 @@ import com.rabbitmq.client.AMQP.BasicProperties
 import com.rabbitmq.client.AMQP.Exchange
 import com.rabbitmq.client.AMQP.Queue
 import com.rabbitmq.client.Method
+import ru.delimobil.cabbit.CollectionConverters._
 import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument
 import ru.delimobil.cabbit.algebra._
 import ru.delimobil.cabbit.algebra.poly.ChannelConsumer
-import ru.delimobil.cabbit.model.BodyEncoder
+import ru.delimobil.cabbit.encoder.BodyEncoder
 import ru.delimobil.cabbit.model.ConsumerTag
 import ru.delimobil.cabbit.model.DeliveryTag
 import ru.delimobil.cabbit.model.ExchangeName
@@ -22,8 +23,6 @@ import ru.delimobil.cabbit.model.declaration.BindDeclaration
 import ru.delimobil.cabbit.model.declaration.Declaration
 import ru.delimobil.cabbit.model.declaration.ExchangeDeclaration
 import ru.delimobil.cabbit.model.declaration.QueueDeclaration
-
-import ru.delimobil.cabbit.CollectionConverters._
 
 private[client] class RabbitClientChannel[F[_]: FlatMap, Stream[*[_], _]](
     channel: ChannelOnPool[F],

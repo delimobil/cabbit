@@ -4,7 +4,7 @@ import ru.delimobil.cabbit.model.declaration.Arguments
 
 import scala.collection.JavaConverters
 
-object CollectionConverters {
+private[cabbit] object CollectionConverters {
 
   implicit class argOps(val args: Arguments) extends AnyVal {
     def asJava: java.util.Map[String, Object] = JavaConverters.mapAsJavaMap(args.asInstanceOf[Map[String, AnyRef]])

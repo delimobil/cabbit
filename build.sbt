@@ -13,9 +13,26 @@ val shared = (project in file("shared"))
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % catsVersion,
       "com.rabbitmq" % "amqp-client" % "5.13.1",
-      "io.circe" %% "circe-core" % circeVersion,
     )
   )
+
+val publishSettings = Seq(
+  // sonatype config
+  publishTo := sonatypePublishToBundle.value,
+  ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org",
+  sonatypeRepository := "https://s01.oss.sonatype.org/service/local",
+  licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
+  homepage := Some(url("https://github.com/delimobil/cabbit")),
+  scmInfo := Some(ScmInfo(url("https://github.com/delimobil/cabbit"), "scm:git@github.com/delimobil/cabbit.git")),
+  developers := List(
+    Developer(
+      id = "nikiforo",
+      name = "Artem Nikiforov",
+      email = "anikiforov@delimobil.ru",
+      url = url("https://github.com/nikiforo"),
+    )
+  )
+)
 
 val commonSettings = Seq(
   version := "0.0.17",
@@ -43,40 +60,34 @@ val commonSettings = Seq(
   },
   libraryDependencies ++= Seq(
     "org.scalatest" %% "scalatest" % "3.2.10" % Test,
-    "io.circe" %% "circe-parser" % circeVersion % Test,
     "com.dimafeng" %% "testcontainers-scala-rabbitmq" % "0.39.8" % Test,
     "org.slf4j" % "slf4j-simple" % "1.7.32" % Test,
   ),
-  Test / publishArtifact := true,
-  // sonatype config
-  publishTo := sonatypePublishToBundle.value,
-  ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org",
-  sonatypeRepository := "https://s01.oss.sonatype.org/service/local",
-  licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
-  homepage := Some(url("https://github.com/delimobil/cabbit")),
-  scmInfo := Some(ScmInfo(url("https://github.com/delimobil/cabbit"), "scm:git@github.com/delimobil/cabbit.git")),
-  developers := List(
-    Developer(
-      id = "nikiforo",
-      name = "Artem Nikiforov",
-      email = "anikiforov@delimobil.ru",
-      url = url("https://github.com/nikiforo"),
-    )
-  )
 )
 
 val root = (project in file("."))
   .dependsOn(shared)
   .settings(commonSettings)
+  .settings(publishSettings)
   .settings(
     name := "cabbit_ce2",
     libraryDependencies += "co.fs2" %% "fs2-core" % fs2VersionCE2,
+    Test / publishArtifact := true,
   )
 
 val ce3 = (project in file("ce3"))
   .dependsOn(shared)
   .settings(commonSettings)
+  .settings(publishSettings)
   .settings(
     name := "cabbit",
     libraryDependencies += "co.fs2" %% "fs2-core" % fs2VersionCE3,
+  )
+
+val cabbitCirce = (project in file("circe"))
+  .dependsOn(shared)
+  .settings(publishSettings)
+  .settings(
+    name := "cabbit-circe",
+    libraryDependencies += "io.circe" %% "circe-core" % circeVersion,
   )

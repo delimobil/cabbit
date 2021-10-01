@@ -9,14 +9,15 @@ import javax.net.ssl.SSLContext
 import ru.delimobil.cabbit.model.CabbitConfig.CabbitNodeConfig
 
 import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
 
 /** @param automaticRecovery <a href="https://www.rabbitmq.com/api-guide.html#recovery"> */
 case class CabbitConfig(
     nodes: NonEmptyList[CabbitNodeConfig],
     virtualHost: String,
-    connectionTimeout: FiniteDuration,
-    username: Option[String],
-    password: Option[String],
+    connectionTimeout: FiniteDuration = 60.seconds,
+    username: Option[String] = None,
+    password: Option[String] = None,
     automaticRecovery: Boolean = true
 )
 

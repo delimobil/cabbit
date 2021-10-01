@@ -14,9 +14,9 @@ object ConnectionFactoryProvider {
   def provide[F[_]: ConcurrentEffect: ContextShift](
       blocker: Blocker,
       config: CabbitConfig,
-      context: Option[SSLContext]
+      sslContext: Option[SSLContext]
   ): ConnectionFactory[F] =
-    provide(blocker, context.fold(config.factoryDefaultSsl)(config.factoryExternalSsl))
+    provide(blocker, sslContext.fold(config.factoryDefaultSsl)(config.factoryExternalSsl))
 
   def provide[F[_]: ConcurrentEffect: ContextShift](
       blocker: Blocker,

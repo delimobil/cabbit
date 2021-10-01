@@ -7,6 +7,6 @@ trait ConnectionFactory[F[_]] {
 
   def newConnection(
       addresses: List[client.Address],
-      appName: Option[String]
+      appName: Option[String] = None
   ): Resource[F, Connection[F]]
 }

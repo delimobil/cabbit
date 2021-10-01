@@ -21,7 +21,7 @@ import scala.concurrent.duration._
 class ConfigSuite extends AnyFunSuite {
 
   implicit val reader: ConfigReader[Map[String, Any]] =
-    ConfigReader[Map[String, ConfigValue]].map(_.map { case(s, value) => s -> value.unwrapped() })
+    ConfigReader[Map[String, ConfigValue]].map(_.map { case (s, value) => s -> value.unwrapped() })
 
   test("CabbitConfig can be extracted by pureconfig") {
     val conf = parseString("""nodes = [

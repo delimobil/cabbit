@@ -5,12 +5,10 @@ import java.util.UUID
 
 import cats.data.Kleisli
 import cats.effect.Blocker
-import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
 import cats.effect.IO
 import cats.effect.Resource
 import cats.effect.Timer
-import cats.effect.syntax.concurrent._
 import cats.effect.syntax.effect._
 import cats.syntax.apply._
 import cats.syntax.flatMap._
@@ -26,13 +24,13 @@ import org.scalatest.funsuite.AnyFunSuite
 import ru.delimobil.cabbit.CollectionConverters._
 import ru.delimobil.cabbit.algebra._
 import ru.delimobil.cabbit.model.ContentEncoding._
-import ru.delimobil.cabbit.model.DeliveryTag
 import ru.delimobil.cabbit.model.ExchangeName
 import ru.delimobil.cabbit.model.QueueName
 import ru.delimobil.cabbit.model.RoutingKey
 import ru.delimobil.cabbit.model.declaration.Arguments
 import ru.delimobil.cabbit.model.declaration.BindDeclaration
 import ru.delimobil.cabbit.model.declaration.QueueDeclaration
+import ru.delimobil.cabbit.syntax._
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -40,7 +38,7 @@ import scala.util.Random
 
 class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
-  import ru.delimobil.cabbit.model.BodyEncoder.instances.textUtf8
+  import ru.delimobil.cabbit.encoder.string.textUtf8
 
   private type CheckGetFunc = Kleisli[IO, QueueName, GetResponse]
 
@@ -60,13 +58,17 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
   private def messagesN(n: Int) = (1 to n).map(i => s"hello from cabbit-$i").toList
 
-  private def tupled[T1, T2](io1: Resource[IO, T1], io2: Resource[IO, T2]): Resource[IO, (T1, T2)] = // for scala 2.12
+  private def tupled[T1, T2](
+      io1: Resource[IO, T1],
+      io2: Resource[IO, T2]
+  ): Resource[IO, (T1, T2)] = // for scala 2.12
     io1.flatMap(t1 => io2.map(t2 => (t1, t2)))
 
   override protected def beforeAll(): Unit = {
     super.beforeAll()
 
-    Resource.eval(RabbitContainer[IO])
+    Resource
+      .eval(RabbitContainer[IO])
       .flatMap { case (cont, shutdown) =>
         for {
           block <- Blocker[IO]
@@ -95,22 +97,22 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("connection is closed") {
-    val actual = checkShutdownNotifier[IO, Connection[IO]](Resource.pure[IO, Connection[IO]](_))
+    val actual = checkShutdownNotifier[Connection[IO]](Resource.pure[IO, Connection[IO]](_))
     assertResult((true, false))(actual)
   }
 
   test("channel declaration is closed") {
-    val actual = checkShutdownNotifier[IO, ChannelDeclaration[IO]](_.createChannelDeclaration)
+    val actual = checkShutdownNotifier[ChannelDeclaration[IO]](_.createChannelDeclaration)
     assertResult((true, false))(actual)
   }
 
   test("channel publisher is closed") {
-    val actual = checkShutdownNotifier[IO, ChannelPublisher[IO]](_.createChannelPublisher)
+    val actual = checkShutdownNotifier[ChannelPublisher[IO]](_.createChannelPublisher)
     assertResult((true, false))(actual)
   }
 
   test("channel consumer is closed") {
-    val actual = checkShutdownNotifier[IO, ChannelConsumer[IO]](_.createChannelConsumer)
+    val actual = checkShutdownNotifier[ChannelConsumer[IO]](_.createChannelConsumer)
     assertResult((true, false))(actual)
   }
 
@@ -169,7 +171,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   test("consumer rejects `basicGet`, `requeue = true`") {
     val io: CheckGetFunc = Kleisli { qName =>
       channel.basicGet(qName, autoAck = false).flatTap { r =>
-        channel.basicReject(DeliveryTag(r.getEnvelope.getDeliveryTag), requeue = true)
+        channel.basicReject(r.deliveryTag, requeue = true)
       }
     }
     checkGet(msgCount = 1, io)
@@ -178,7 +180,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   test("consumer rejects `basicGet` `requeue = false`") {
     val io: CheckGetFunc = Kleisli { qName =>
       channel.basicGet(qName, autoAck = false).flatTap { r =>
-        channel.basicReject(DeliveryTag(r.getEnvelope.getDeliveryTag), requeue = false)
+        channel.basicReject(r.deliveryTag, requeue = false)
       }
     }
     checkGet(msgCount = 0, io)
@@ -204,7 +206,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     }
   }
 
-  ignore("consumer completes on cancel, msg gets requeued") { }
+  ignore("consumer completes on cancel, msg gets requeued") {}
 
   test("Stream completes on queue removal") {
     rabbitUtils.useQueueDeclared(Map.empty) { qName =>
@@ -222,18 +224,21 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
       .makeConnection[IO](blocker)
       .flatMap(conn => tupled(conn.createChannelDeclaration, conn.createChannelDeclaration))
       .use { case (channel1, channel2) =>
-        rabbitUtils.declareExclusive(channel1, channel2)
+        rabbitUtils
+          .declareExclusive(channel1, channel2)
           .map { case (result1, result2) => assert(result1.isRight && result2.isRight) }
       }
       .unsafeRunSync()
   }
 
   test("only one of two exclusive queues on different connections should work") {
-    val connRes = container.makeConnection[IO](blocker).flatMap(c => c.createChannelDeclaration.map((c, _)))
+    val connRes =
+      container.makeConnection[IO](blocker).flatMap(c => c.createChannelDeclaration.map((c, _)))
 
     tupled(connRes, connRes)
       .use { case ((conn1, channel1), (conn2, channel2)) =>
-        rabbitUtils.declareExclusive(channel1, channel2)
+        rabbitUtils
+          .declareExclusive(channel1, channel2)
           .product((channel1.isOpen, channel2.isOpen, conn1.isOpen, conn2.isOpen).tupled)
           .map { case ((result1, result2), (ch1Open, ch2Open, conn1Open, conn2Open)) =>
             assert(result1.isRight ^ result2.isRight)
@@ -256,7 +261,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         .map { case (_, stream) =>
           stream
             .take(amount)
-            .evalTap(delivery => channel.basicReject(DeliveryTag(delivery.getEnvelope.getDeliveryTag), requeue = true))
+            .evalTap(delivery => channel.basicReject(delivery.deliveryTag, requeue = true))
         }
         .pipe(Stream.force(_).compile.toList)
         .map { list =>
@@ -276,7 +281,9 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         .flatTap(qName => messages.traverse_(msg => channel.basicPublishDirect(qName, msg)))
         .productL(sleep)
         .flatTap(qName => rabbitUtils.readReject(qName))
-        .flatMap(qName => rabbitUtils.readAck(deadLetterBind.queueName).product(rabbitUtils.readAck(qName)))
+        .flatMap(qName =>
+          rabbitUtils.readAck(deadLetterBind.queueName).product(rabbitUtils.readAck(qName))
+        )
         .map { case (deadDeliveries, deliveries) =>
           assert(deliveries.isEmpty)
           assert(messages == deadDeliveries)
@@ -288,12 +295,15 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     val messages = (1 to 10).map(i => s"hello from cabbit-$i").toList
 
     rabbitUtils.useBinded(Map.empty) { deadLetterBind =>
-      val args: Arguments = Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name, "x-max-length" -> 7)
+      val args: Arguments =
+        Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name, "x-max-length" -> 7)
       rabbitUtils
         .queueDeclaredIO(args)
         .flatTap(qName => messages.traverse_(msg => channel.basicPublishDirect(qName, msg)))
         .productL(sleep)
-        .flatMap(qName => rabbitUtils.readAck(deadLetterBind.queueName).product(rabbitUtils.readAck(qName)))
+        .flatMap(qName =>
+          rabbitUtils.readAck(deadLetterBind.queueName).product(rabbitUtils.readAck(qName))
+        )
         .map { case (deadDeliveries, deliveries) =>
           val (left, right) = messages.splitAt(3)
           assert(left == deadDeliveries)
@@ -309,7 +319,9 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
       val args = Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name)
       rabbitUtils
         .bindedIO(args)
-        .flatTap(bind => messages.traverse_(msg => channel.basicPublishFanout(bind.exchangeName, msg)))
+        .flatTap(bind =>
+          messages.traverse_(msg => channel.basicPublishFanout(bind.exchangeName, msg))
+        )
         .productL(sleep)
         .flatTap(bind => channel.queueDelete(bind.queueName))
         .productL(sleep)
@@ -330,7 +342,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         .productR(channel.basicPublish(exName, nonRoutedKey, nonRoutedMessage))
         .productR(sleep)
         .productR(rabbitUtils.readAck(routedQueue).product(rabbitUtils.readAck(nonRoutedQueue)))
-        .map { case(routed, nonRouted) =>
+        .map { case (routed, nonRouted) =>
           assert(routed == List(routedMessage))
           assert(nonRouted == List(nonRoutedMessage))
         }
@@ -357,7 +369,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         bind <- rabbitUtils.bindQueueToExchangeIO(exName, nonRoutingKey, Map.empty)
         _ <- sleep
         _ <- channel.basicPublish(exName, newlyRoutedKey, newlyRoutedMessage)
-        _ <- channel.basicReject(DeliveryTag(getResponse.getEnvelope.getDeliveryTag), requeue = true)
+        _ <- channel.basicReject(getResponse.deliveryTag, requeue = true)
         _ <- sleep
         routed <- rabbitUtils.readAck(routedQueue)
         nonRouted <- rabbitUtils.readAck(nonRoutedQueue)
@@ -374,7 +386,8 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     val ttl = 150
 
     rabbitUtils.useBinded(Map.empty) { deadLetterBind =>
-      val args = Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name, "x-message-ttl" -> ttl)
+      val args =
+        Map("x-dead-letter-exchange" -> deadLetterBind.exchangeName.name, "x-message-ttl" -> ttl)
       for {
         bind <- rabbitUtils.bindedIO(args)
         _ <- channel.basicPublishFanout(bind.exchangeName, message)
@@ -391,7 +404,8 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     intercept[ShutdownSignalException] {
       rabbitUtils.useQueueDeclared(Map.empty) { qName =>
         channel
-          .deliveryStream(qName, 1).map(_._2)
+          .deliveryStream(qName, 1)
+          .map(_._2)
           .productL(shutdownIO)
           .flatMap(stream => stream.compile.toList.timeout(300.millis))
           .void
@@ -399,12 +413,12 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     }
   }
 
-  private def checkShutdownNotifier[F[_]: ConcurrentEffect: ContextShift: Timer, T <: ShutdownNotifier[F]](
-    f: Connection[F] => Resource[F, T]
+  private def checkShutdownNotifier[T <: ShutdownNotifier[IO]](
+      f: Connection[IO] => Resource[IO, T]
   ): (Boolean, Boolean) = {
     val ((_, openDuringUse), openAfterUse) =
       container
-        .makeConnection[F](blocker)
+        .makeConnection[IO](blocker)
         .flatMap(f)
         .use(notifier => notifier.isOpen.tupleLeft(notifier))
         .mproduct(_._1.isOpen)

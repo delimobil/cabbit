@@ -2,7 +2,7 @@ package ru.delimobil.cabbit.algebra
 
 import com.rabbitmq.client.AMQP.BasicProperties
 import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument
-import ru.delimobil.cabbit.model.BodyEncoder
+import ru.delimobil.cabbit.encoder.BodyEncoder
 import ru.delimobil.cabbit.model.ExchangeName
 import ru.delimobil.cabbit.model.QueueName
 import ru.delimobil.cabbit.model.RoutingKey

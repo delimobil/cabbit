@@ -20,7 +20,6 @@ import fs2.Stream
 import ru.delimobil.cabbit.algebra._
 import ru.delimobil.cabbit.model.ConsumerTag
 import ru.delimobil.cabbit.model.ContentEncoding.decodeUtf8
-import ru.delimobil.cabbit.model.DeliveryTag
 import ru.delimobil.cabbit.model.ExchangeName
 import ru.delimobil.cabbit.model.QueueName
 import ru.delimobil.cabbit.model.RoutingKey
@@ -29,6 +28,7 @@ import ru.delimobil.cabbit.model.declaration.AutoDeleteConfig
 import ru.delimobil.cabbit.model.declaration.BindDeclaration
 import ru.delimobil.cabbit.model.declaration.ExchangeDeclaration
 import ru.delimobil.cabbit.model.declaration.QueueDeclaration
+import ru.delimobil.cabbit.syntax._
 
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
@@ -40,12 +40,11 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
   private val rndQu: F[QueueName] = uuidIO.map(uuid => QueueName(uuid.toString))
 
   def timedRead(
-    tuple: (ConsumerTag, Stream[F, Delivery]),
-    halt: F[Unit] = Timer[F].sleep(150.millis),
-    ack: Delivery => F[Unit] = d => ch.basicAck(DeliveryTag(d.getEnvelope.getDeliveryTag), multiple = false),
+      tuple: (ConsumerTag, Stream[F, Delivery]),
+      halt: F[Unit] = Timer[F].sleep(150.millis),
+      ack: Delivery => F[Unit] = d => ch.basicAck(d.deliveryTag, multiple = false)
   ): F[List[String]] =
-    tuple
-      ._2
+    tuple._2
       .evalTap(ack)
       .concurrently(Stream.eval_(halt *> ch.basicCancel(tuple._1)))
       .compile
@@ -59,10 +58,14 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
 
   def readReject(queue: QueueName, halt: F[Unit] = Timer[F].sleep(150.millis)): F[List[String]] =
     ch.deliveryStream(queue, 100).flatMap { tuple =>
-      timedRead(tuple, halt, d => ch.basicReject(DeliveryTag(d.getEnvelope.getDeliveryTag), requeue = false))
+      timedRead(tuple, halt, d => ch.basicReject(d.deliveryTag, requeue = false))
     }
 
-  def bindQueueToExchangeIO(exName: ExchangeName, rk: RoutingKey, qProps: Arguments): F[BindDeclaration] =
+  def bindQueueToExchangeIO(
+      exName: ExchangeName,
+      rk: RoutingKey,
+      qProps: Arguments
+  ): F[BindDeclaration] =
     for {
       qName <- rndQu
       _ <- ch.queueDeclare(getQueue(qName, qProps))
@@ -85,7 +88,11 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
 
   // Returns QueueName, because queueDeclare(QueueDeclaration) would throw on auto assigned name queues.
   def queueDeclaredIO(qProps: Arguments): F[QueueName] = {
-    val dec = QueueDeclaration(QueueName.default, autoDelete = AutoDeleteConfig.NonAutoDelete, arguments = qProps)
+    val dec = QueueDeclaration(
+      QueueName.default,
+      autoDelete = AutoDeleteConfig.NonAutoDelete,
+      arguments = qProps
+    )
     ch.queueDeclare(dec).map(ok => QueueName(ok.getQueue))
   }
 
@@ -97,19 +104,21 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
       alternateBind <- bindedIO(Map.empty)
       args = Map("alternate-exchange" -> alternateBind.exchangeName.name)
       primaryEx <- rndEx
-      _ <- ch.exchangeDeclare(ExchangeDeclaration(primaryEx, BuiltinExchangeType.TOPIC, arguments = args))
+      _ <- ch.exchangeDeclare(
+        ExchangeDeclaration(primaryEx, BuiltinExchangeType.TOPIC, arguments = args)
+      )
       primaryBind <- bindQueueToExchangeIO(primaryEx, rk, Map.empty)
     } yield (primaryEx, primaryBind.queueName, alternateBind.queueName)
 
-  def useAlternateExchange(rk: RoutingKey)(testFunc: (ExchangeName, QueueName, QueueName) => F[Unit]): Unit =
+  def useAlternateExchange(rk: RoutingKey)(
+      testFunc: (ExchangeName, QueueName, QueueName) => F[Unit]
+  ): Unit =
     alternateExchangeIO(rk).flatMap(testFunc.tupled).toIO.unsafeRunSync()
 
   def spoilChannel[E <: Throwable](f: Channel[F] => F[Unit])(implicit classTag: ClassTag[E]): Unit =
-    conn
-      .createChannel
+    conn.createChannel
       .use { ch =>
-        f(ch)
-          .attempt
+        f(ch).attempt
           .flatMap {
             case Left(ex) =>
               ch.isOpen.map { open =>
@@ -117,7 +126,7 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
                 assert(!open)
               }
             case Right(()) =>
-              val ex = new java.lang.AssertionError("assertion failed: expected error, found no one")
+              val ex = new AssertionError("assertion failed: expected error")
               MonadError[F, Throwable].raiseError[Unit](ex)
           }
       }
@@ -125,8 +134,8 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connectio
       .unsafeRunSync()
 
   def declareExclusive(
-    channel1: ChannelDeclaration[F],
-    channel2: ChannelDeclaration[F]
+      channel1: ChannelDeclaration[F],
+      channel2: ChannelDeclaration[F]
   ): F[(Either[Throwable, Queue.DeclareOk], Either[Throwable, Queue.DeclareOk])] =
     uuidIO.flatMap { uuid =>
       val queue = QueueDeclaration(QueueName(uuid.toString))
