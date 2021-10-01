@@ -34,21 +34,30 @@ libraryDependencies += "ru.delimobil" %% "cabbit-circe" % "0.0.17"
 ```
 
 ## Teaser
+This is how you can publish an arbitrary class to RabbitMQ:
 
-    import ru.delimobil.cabbit.encoder.string.textUtf8
+```scala
+    import io.circe.generic.auto._
+    import ru.delimobil.cabbit.encoder.json.jsonUtf8
+
+    case class Message(from: String, msg: String)    
     
     val node = CabbitNodeConfig(host, port)
     val config = CabbitConfig(NonEmptyList.one(node), "/")
     val exchange = ExchangeName.default
     val rk = RoutingKey("teaser-example-queue")
+    val msg = Message("TeaserPublishApp", "hello from cabbit")
     ConnectionFactoryProvider
-      .provide[IO](config, context = None)
+      .provide[IO](config, sslContext = None)
       .newConnection(config.addresses)
       .flatMap(_.createChannelPublisher)
-      .use(_.basicPublish(exchange, rk, "hello from cabbit")
+      .use(_.basicPublish(exchange, rk, msg))
+```
 
 ### Example
-Ready to start? Follow the white cabbit to CabbitSuite.
+Ready to start? [Follow] the white cabbit.
+
+[https://github.com/delimobil/cabbit-example]
 
 ### LICENSE ###
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this project except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.

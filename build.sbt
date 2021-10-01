@@ -7,14 +7,7 @@ val fs2VersionCE2 = "2.5.9"
 val fs2VersionCE3 = "3.1.3"
 val circeVersion = "0.14.1"
 val pureconfigVersion = "0.16.0"
-
-val shared = (project in file("shared"))
-  .settings(
-    libraryDependencies ++= Seq(
-      "org.typelevel" %% "cats-core" % catsVersion,
-      "com.rabbitmq" % "amqp-client" % "5.13.1",
-    )
-  )
+val amqpClientVersion =  "5.13.1"
 
 val publishSettings = Seq(
   // sonatype config
@@ -45,38 +38,48 @@ val commonSettings = Seq(
       case _ =>
         Seq("-target:jvm-1.8")
     }
-  },
-  libraryDependencies ++= {
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, _)) =>
-        List(
-          "com.github.pureconfig" %% "pureconfig" % pureconfigVersion % Test,
-          "com.github.pureconfig" %% "pureconfig-cats" % pureconfigVersion % Test,
-          compilerPlugin("org.typelevel" % "kind-projector" % "0.13.2" cross CrossVersion.full)
-        )
-      case _ =>
-        Nil
-    }
-  },
-  libraryDependencies ++= Seq(
-    "org.scalatest" %% "scalatest" % "3.2.10" % Test,
-    "com.dimafeng" %% "testcontainers-scala-rabbitmq" % "0.39.8" % Test,
-    "org.slf4j" % "slf4j-simple" % "1.7.32" % Test,
-  ),
+  }
 )
 
+val core = (project in file("core"))
+  .settings(commonSettings)
+  .settings(publishSettings)
+  .settings(
+    name := "cabbit-core",
+    libraryDependencies ++= Seq(
+      "org.typelevel" %% "cats-core" % catsVersion,
+      "com.rabbitmq" % "amqp-client" % amqpClientVersion,
+    )
+  )
+
 val root = (project in file("."))
-  .dependsOn(shared)
+  .dependsOn(core)
   .settings(commonSettings)
   .settings(publishSettings)
   .settings(
     name := "cabbit_ce2",
+    libraryDependencies ++= {
+      CrossVersion.partialVersion(scalaVersion.value) match {
+        case Some((2, _)) =>
+          List(
+            "com.github.pureconfig" %% "pureconfig" % pureconfigVersion % Test,
+            "com.github.pureconfig" %% "pureconfig-cats" % pureconfigVersion % Test,
+          )
+        case _ =>
+          Nil
+      }
+    },
+    libraryDependencies ++= Seq(
+      "org.scalatest" %% "scalatest" % "3.2.10" % Test,
+      "com.dimafeng" %% "testcontainers-scala-rabbitmq" % "0.39.8" % Test,
+      "org.slf4j" % "slf4j-simple" % "1.7.32" % Test,
+    ),
     libraryDependencies += "co.fs2" %% "fs2-core" % fs2VersionCE2,
     Test / publishArtifact := true,
   )
 
 val ce3 = (project in file("ce3"))
-  .dependsOn(shared)
+  .dependsOn(core)
   .settings(commonSettings)
   .settings(publishSettings)
   .settings(
@@ -84,8 +87,9 @@ val ce3 = (project in file("ce3"))
     libraryDependencies += "co.fs2" %% "fs2-core" % fs2VersionCE3,
   )
 
-val cabbitCirce = (project in file("circe"))
-  .dependsOn(shared)
+val circe = (project in file("circe"))
+  .dependsOn(core)
+  .settings(commonSettings)
   .settings(publishSettings)
   .settings(
     name := "cabbit-circe",
