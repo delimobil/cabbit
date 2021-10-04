@@ -16,7 +16,7 @@ The wrapper is intended to be thin and resemble the client.
 cabbit is cross built for `scala "2.12.15" | "2.13.6" | "3.0.2"` & `ce2 | ce3`.
 Thus, you can choose from these artifacts:
 
-|               | `cats-effect` 3.2.9(through `fs2` 3.1.3) | `cats-effect` 2.5.1 (through `fs2` 2.5.9) |
+|               | `ce 3.2.9`(through `fs2 3.1.3`) | `ce 2.5.1` (through `fs2 2.5.9`) |
 |      ---      | --- | --- |
 | scala 2.12.15 | cabbit_2.12 | cabbit_ce2_2.12 |
 | scala 2.13.6  | cabbit_2.13 | cabbit_ce2_2.13 |
@@ -57,7 +57,7 @@ This is how you can publish an arbitrary class to RabbitMQ:
 ### Example
 Ready to start? [Follow] the white cabbit.
 
-[https://github.com/delimobil/cabbit-example]
+[Follow]: https://github.com/delimobil/cabbit-example
 
 ### LICENSE ###
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this project except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
