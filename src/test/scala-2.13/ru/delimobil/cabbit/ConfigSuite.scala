@@ -1,7 +1,7 @@
 package ru.delimobil.cabbit
 
 import cats.data.NonEmptyList
-import cats.syntax.all._
+import cats.syntax.either._
 import com.rabbitmq.client.BuiltinExchangeType
 import com.typesafe.config.ConfigFactory.parseString
 import com.typesafe.config.ConfigValue
@@ -10,18 +10,18 @@ import pureconfig.ConfigReader
 import pureconfig.ConfigSource
 import pureconfig.generic.auto._
 import pureconfig.module.cats._
-import ru.delimobil.cabbit.algebra.ExchangeName
-import ru.delimobil.cabbit.algebra.QueueName
-import ru.delimobil.cabbit.config.CabbitConfig
-import ru.delimobil.cabbit.config.CabbitConfig.CabbitNodeConfig
-import ru.delimobil.cabbit.config.declaration._
+import ru.delimobil.cabbit.model.CabbitConfig.CabbitNodeConfig
+import ru.delimobil.cabbit.model.CabbitConfig
+import ru.delimobil.cabbit.model.declaration._
+import ru.delimobil.cabbit.model.ExchangeName
+import ru.delimobil.cabbit.model.QueueName
 
 import scala.concurrent.duration._
 
 class ConfigSuite extends AnyFunSuite {
 
   implicit val reader: ConfigReader[Map[String, Any]] =
-    ConfigReader[Map[String, ConfigValue]].map(_.map { case(s, value) => s -> value.unwrapped() })
+    ConfigReader[Map[String, ConfigValue]].map(_.map { case (s, value) => s -> value.unwrapped() })
 
   test("CabbitConfig can be extracted by pureconfig") {
     val conf = parseString("""nodes = [
