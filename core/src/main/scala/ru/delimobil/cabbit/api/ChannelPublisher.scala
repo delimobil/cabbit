@@ -1,7 +1,7 @@
-package ru.delimobil.cabbit.algebra
+package ru.delimobil.cabbit.api
 
 import com.rabbitmq.client.AMQP.BasicProperties
-import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument
+import ru.delimobil.cabbit.api.ChannelPublisher.MandatoryArgument
 import ru.delimobil.cabbit.encoder.BodyEncoder
 import ru.delimobil.cabbit.model.ExchangeName
 import ru.delimobil.cabbit.model.QueueName

@@ -6,8 +6,8 @@ import cats.effect.kernel.Sync
 import cats.syntax.functor._
 import com.rabbitmq.client
 import ru.delimobil.cabbit.CollectionConverters._
-import ru.delimobil.cabbit.algebra.Connection
-import ru.delimobil.cabbit.algebra.ConnectionFactory
+import ru.delimobil.cabbit.api.Connection
+import ru.delimobil.cabbit.api.ConnectionFactory
 import ru.delimobil.cabbit.client.consumer.ChannelDeferredConsumerProvider
 
 private[cabbit] final class RabbitClientConnectionFactory[F[_]: Async](

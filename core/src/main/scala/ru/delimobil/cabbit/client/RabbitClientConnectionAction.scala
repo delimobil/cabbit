@@ -4,7 +4,7 @@ import cats.Monad
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import com.rabbitmq.client
-import ru.delimobil.cabbit.algebra.ChannelOnPool
+import ru.delimobil.cabbit.api.ChannelOnPool
 import ru.delimobil.cabbit.ce.api.Blocker
 import ru.delimobil.cabbit.ce.api.SemaphoreMake
 

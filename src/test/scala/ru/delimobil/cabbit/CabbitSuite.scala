@@ -22,7 +22,7 @@ import fs2.Stream
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
 import ru.delimobil.cabbit.CollectionConverters._
-import ru.delimobil.cabbit.algebra._
+import ru.delimobil.cabbit.api._
 import ru.delimobil.cabbit.model.ContentEncoding._
 import ru.delimobil.cabbit.model.ExchangeName
 import ru.delimobil.cabbit.model.QueueName

@@ -1,4 +1,4 @@
-package ru.delimobil.cabbit.algebra
+package ru.delimobil.cabbit.api
 
 import com.rabbitmq.client.AMQP.Exchange
 import com.rabbitmq.client.AMQP.Queue

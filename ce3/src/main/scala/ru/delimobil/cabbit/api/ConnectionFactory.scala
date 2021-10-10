@@ -1,4 +1,4 @@
-package ru.delimobil.cabbit.algebra
+package ru.delimobil.cabbit.api
 
 import cats.effect.Resource
 import com.rabbitmq.client

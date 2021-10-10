@@ -4,11 +4,11 @@ import cats.effect.Resource
 import cats.effect.kernel.Async
 import com.rabbitmq.client
 import fs2.Stream
-import ru.delimobil.cabbit.algebra.Channel
-import ru.delimobil.cabbit.algebra.ChannelConsumer
-import ru.delimobil.cabbit.algebra.ChannelDeclaration
-import ru.delimobil.cabbit.algebra.ChannelPublisher
-import ru.delimobil.cabbit.algebra.Connection
+import ru.delimobil.cabbit.api.Channel
+import ru.delimobil.cabbit.api.ChannelConsumer
+import ru.delimobil.cabbit.api.ChannelDeclaration
+import ru.delimobil.cabbit.api.ChannelPublisher
+import ru.delimobil.cabbit.api.Connection
 import ru.delimobil.cabbit.ce.impl._
 import ru.delimobil.cabbit.client.poly.RabbitClientConsumerProvider
 

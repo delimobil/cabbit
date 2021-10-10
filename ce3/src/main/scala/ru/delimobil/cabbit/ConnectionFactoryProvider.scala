@@ -3,7 +3,7 @@ package ru.delimobil.cabbit
 import cats.effect.kernel.Async
 import com.rabbitmq.client.{ConnectionFactory => JConnectionFactory}
 import javax.net.ssl.SSLContext
-import ru.delimobil.cabbit.algebra.ConnectionFactory
+import ru.delimobil.cabbit.api.ConnectionFactory
 import ru.delimobil.cabbit.client.RabbitClientConnectionFactory
 import ru.delimobil.cabbit.model.CabbitConfig
 

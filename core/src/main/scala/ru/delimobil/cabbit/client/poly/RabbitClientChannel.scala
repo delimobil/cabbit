@@ -10,9 +10,9 @@ import com.rabbitmq.client.AMQP.Exchange
 import com.rabbitmq.client.AMQP.Queue
 import com.rabbitmq.client.Method
 import ru.delimobil.cabbit.CollectionConverters._
-import ru.delimobil.cabbit.algebra.ChannelPublisher.MandatoryArgument
-import ru.delimobil.cabbit.algebra._
-import ru.delimobil.cabbit.algebra.poly.ChannelConsumer
+import ru.delimobil.cabbit.api.ChannelPublisher.MandatoryArgument
+import ru.delimobil.cabbit.api._
+import ru.delimobil.cabbit.api.poly.ChannelConsumer
 import ru.delimobil.cabbit.encoder.BodyEncoder
 import ru.delimobil.cabbit.model.ConsumerTag
 import ru.delimobil.cabbit.model.DeliveryTag
