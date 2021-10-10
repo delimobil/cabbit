@@ -1,7 +1,7 @@
 cabbit
 =============
 
-[![Latest version](https://img.shields.io/badge/cabbit-0.0.17-orange.svg)](https://github.com/delimobil/cabbit)
+[![Latest version](https://img.shields.io/badge/cabbit-0.1.0-orange.svg)](https://github.com/delimobil/cabbit)
 
 A [cabbit] is a fictional hybrid between a cat and a rabbit.
 
@@ -25,12 +25,12 @@ Thus, you can choose from these artifacts:
 
 For ce3 versions add this instruction to your build.sbt:
 ```sbt
-libraryDependencies += "ru.delimobil" %% "cabbit" % "0.0.17"
+libraryDependencies += "ru.delimobil" %% "cabbit" % "0.1.0"
 ```
 For ce2 versions replace `cabbit` with `cabbit_ce2`.
 To use circe encoders add this artifact to your build.sbt:
 ```sbt
-libraryDependencies += "ru.delimobil" %% "cabbit-circe" % "0.0.17"
+libraryDependencies += "ru.delimobil" %% "cabbit-circe" % "0.1.0"
 ```
 
 ## Teaser
