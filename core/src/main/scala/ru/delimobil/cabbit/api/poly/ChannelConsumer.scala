@@ -1,7 +1,7 @@
-package ru.delimobil.cabbit.algebra.poly
+package ru.delimobil.cabbit.api.poly
 
 import com.rabbitmq.client
-import ru.delimobil.cabbit.algebra.ChannelAcker
+import ru.delimobil.cabbit.api.ChannelAcker
 import ru.delimobil.cabbit.model.ConsumerTag
 import ru.delimobil.cabbit.model.QueueName
 

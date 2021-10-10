@@ -8,7 +8,7 @@ import cats.effect.Resource
 import cats.effect.Sync
 import cats.syntax.functor._
 import com.dimafeng.testcontainers.RabbitMQContainer
-import ru.delimobil.cabbit.algebra.Connection
+import ru.delimobil.cabbit.api.Connection
 import ru.delimobil.cabbit.model.CabbitConfig.Host
 import ru.delimobil.cabbit.model.CabbitConfig.Port
 import ru.delimobil.cabbit.model.CabbitConfig

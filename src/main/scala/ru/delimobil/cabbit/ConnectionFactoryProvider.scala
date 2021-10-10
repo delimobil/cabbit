@@ -5,7 +5,7 @@ import cats.effect.ConcurrentEffect
 import cats.effect.ContextShift
 import com.rabbitmq.client.{ConnectionFactory => JConnectionFactory}
 import javax.net.ssl.SSLContext
-import ru.delimobil.cabbit.algebra.ConnectionFactory
+import ru.delimobil.cabbit.api.ConnectionFactory
 import ru.delimobil.cabbit.client.RabbitClientConnectionFactory
 import ru.delimobil.cabbit.model.CabbitConfig
 

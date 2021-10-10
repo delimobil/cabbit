@@ -28,13 +28,13 @@ val publishSettings = Seq(
 )
 
 val commonSettings = Seq(
-  version := "0.0.17",
+  version := "0.1.0",
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((3, _)) =>
         Seq("-source:3.0-migration")
       case Some((2,13)) =>
-        Seq("-deprecation", "-Xfatal-warnings", "-target:jvm-1.8")
+        Seq("-deprecation", "-Xfatal-warnings")
       case _ =>
         Seq("-target:jvm-1.8")
     }

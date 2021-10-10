@@ -7,8 +7,8 @@ import cats.effect.Resource
 import cats.syntax.functor._
 import com.rabbitmq.client
 import fs2.Stream
-import ru.delimobil.cabbit.algebra.Connection
-import ru.delimobil.cabbit.algebra.ConnectionFactory
+import ru.delimobil.cabbit.api.Connection
+import ru.delimobil.cabbit.api.ConnectionFactory
 import ru.delimobil.cabbit.client.consumer.QueueDeferredConsumerProvider
 import ru.delimobil.cabbit.client.poly.RabbitClientConsumerProvider
 

@@ -17,7 +17,7 @@ import com.rabbitmq.client.AMQP.Queue
 import com.rabbitmq.client.BuiltinExchangeType
 import com.rabbitmq.client.Delivery
 import fs2.Stream
-import ru.delimobil.cabbit.algebra._
+import ru.delimobil.cabbit.api._
 import ru.delimobil.cabbit.model.ConsumerTag
 import ru.delimobil.cabbit.model.ContentEncoding.decodeUtf8
 import ru.delimobil.cabbit.model.ExchangeName
