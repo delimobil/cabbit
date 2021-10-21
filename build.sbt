@@ -33,10 +33,10 @@ val commonSettings = Seq(
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((3, _)) =>
         Seq("-source:3.0-migration")
-      case Some((2,13)) =>
+      case Some((2, 13)) =>
         Seq("-deprecation", "-Xfatal-warnings")
       case _ =>
-        Seq("-target:jvm-1.8")
+        Seq()
     }
   }
 )
