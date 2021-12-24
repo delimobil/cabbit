@@ -1,10 +1,10 @@
-ThisBuild / scalaVersion := "2.13.6"
+ThisBuild / scalaVersion := "2.13.7"
 ThisBuild / organization := "ru.delimobil"
-ThisBuild / crossScalaVersions ++= Seq("2.12.15", "2.13.6", "3.0.2")
+ThisBuild / crossScalaVersions ++= Seq("2.12.15", "2.13.7", "3.0.2")
 
 val catsVersion = "2.6.1"
-val fs2VersionCE2 = "2.5.9"
-val fs2VersionCE3 = "3.1.3"
+val fs2VersionCE2 = "2.5.10"
+val fs2VersionCE3 = "3.2.2"
 val circeVersion = "0.14.1"
 val pureconfigVersion = "0.16.0"
 val amqpClientVersion =  "5.13.1"
@@ -28,15 +28,15 @@ val publishSettings = Seq(
 )
 
 val commonSettings = Seq(
-  version := "0.1.0",
+  version := "0.1.1",
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((3, _)) =>
         Seq("-source:3.0-migration")
-      case Some((2,13)) =>
+      case Some((2, 13)) =>
         Seq("-deprecation", "-Xfatal-warnings")
       case _ =>
-        Seq("-target:jvm-1.8")
+        Seq()
     }
   }
 )
@@ -71,7 +71,7 @@ val root = (project in file("."))
     },
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "3.2.10" % Test,
-      "com.dimafeng" %% "testcontainers-scala-rabbitmq" % "0.39.8" % Test,
+      "com.dimafeng" %% "testcontainers-scala-rabbitmq" % "0.39.12" % Test,
       "org.slf4j" % "slf4j-simple" % "1.7.32" % Test,
     ),
     libraryDependencies += "co.fs2" %% "fs2-core" % fs2VersionCE2,

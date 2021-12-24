@@ -10,6 +10,7 @@ import com.rabbitmq.client.AMQP.Exchange
 import com.rabbitmq.client.AMQP.Queue
 import com.rabbitmq.client.Method
 import ru.delimobil.cabbit.CollectionConverters._
+import ru.delimobil.cabbit.api.ChannelAcker._
 import ru.delimobil.cabbit.api.ChannelPublisher.MandatoryArgument
 import ru.delimobil.cabbit.api._
 import ru.delimobil.cabbit.api.poly.ChannelConsumer
@@ -66,6 +67,13 @@ private[client] class RabbitClientChannel[F[_]: FlatMap, Stream[*[_], _]](
 
   def basicCancel(consumerTag: ConsumerTag): F[Unit] =
     channel.delay(_.basicCancel(consumerTag.name))
+
+  def basicConfirm(outcome: Confirmation): F[Unit] =
+    outcome match {
+      case Ack(tag, multiple) => basicAck(tag, multiple)
+      case Nack(tag, multiple, requeue) => basicNack(tag, multiple, requeue)
+      case Reject(tag, requeue) => basicReject(tag, requeue)
+    }
 
   def queueDeclare(queueDeclaration: QueueDeclaration): F[Queue.DeclareOk] =
     channel.delay {
