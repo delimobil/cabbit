@@ -10,10 +10,12 @@ trait BodyEncoderLabelled[V] extends BodyEncoder[V] {
 
   def contentEncoding: ContentEncoding
 
-  final def alterProps(props: BasicProperties): BasicProperties = {
-    val cType = Option(props.getContentType).filter(_.nonEmpty).getOrElse(contentType.raw)
-    val propsEncoding = Option(props.getContentEncoding).filter(_.nonEmpty)
-    val cEncoding = propsEncoding.getOrElse(contentEncoding.raw)
-    props.builder().contentType(cType).contentEncoding(cEncoding).build()
-  }
+  final def alterProps(props: BasicProperties): BasicProperties =
+    props
+      .builder()
+      .contentType(Option(props.getContentType).filter(_.nonEmpty).getOrElse(contentType.raw))
+      .contentEncoding(
+        Option(props.getContentEncoding).filter(_.nonEmpty).getOrElse(contentEncoding.raw)
+      )
+      .build()
 }
