@@ -1,6 +1,8 @@
 ThisBuild / scalaVersion := "2.13.7"
 ThisBuild / organization := "ru.delimobil"
-ThisBuild / crossScalaVersions ++= Seq("2.12.15", "2.13.7", "3.0.2")
+ThisBuild / crossScalaVersions ++= Seq("2.12.15", "2.13.7", "3.1.0")
+
+version := "0.1.1"
 
 val catsVersion = "2.6.1"
 val fs2VersionCE2 = "2.5.10"
@@ -8,6 +10,17 @@ val fs2VersionCE3 = "3.2.2"
 val circeVersion = "0.14.1"
 val pureconfigVersion = "0.16.0"
 val amqpClientVersion =  "5.13.1"
+
+scalacOptions ++= {
+  CrossVersion.partialVersion(scalaVersion.value) match {
+    case Some((3, _)) =>
+      Seq("-source:3.0-migration")
+    case Some((2, 13)) =>
+      Seq("-deprecation", "-Xfatal-warnings")
+    case _ =>
+      Seq()
+  }
+}
 
 val publishSettings = Seq(
   // sonatype config
@@ -27,22 +40,7 @@ val publishSettings = Seq(
   )
 )
 
-val commonSettings = Seq(
-  version := "0.1.1",
-  scalacOptions ++= {
-    CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((3, _)) =>
-        Seq("-source:3.0-migration")
-      case Some((2, 13)) =>
-        Seq("-deprecation", "-Xfatal-warnings")
-      case _ =>
-        Seq()
-    }
-  }
-)
-
 val core = (project in file("core"))
-  .settings(commonSettings)
   .settings(publishSettings)
   .settings(
     name := "cabbit-core",
@@ -54,7 +52,6 @@ val core = (project in file("core"))
 
 val root = (project in file("."))
   .dependsOn(core)
-  .settings(commonSettings)
   .settings(publishSettings)
   .settings(
     name := "cabbit_ce2",
@@ -80,7 +77,6 @@ val root = (project in file("."))
 
 val ce3 = (project in file("ce3"))
   .dependsOn(core)
-  .settings(commonSettings)
   .settings(publishSettings)
   .settings(
     name := "cabbit",
@@ -89,7 +85,6 @@ val ce3 = (project in file("ce3"))
 
 val circe = (project in file("circe"))
   .dependsOn(core)
-  .settings(commonSettings)
   .settings(publishSettings)
   .settings(
     name := "cabbit-circe",
