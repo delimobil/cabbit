@@ -1,6 +1,6 @@
 ThisBuild / scalaVersion := "2.13.7"
 ThisBuild / organization := "ru.delimobil"
-ThisBuild / crossScalaVersions ++= Seq("2.12.15", "2.13.7", "3.0.2")
+ThisBuild / crossScalaVersions ++= Seq("2.12.15", "2.13.7", "3.1.0")
 
 val catsVersion = "2.6.1"
 val fs2VersionCE2 = "2.5.10"
@@ -28,7 +28,7 @@ val publishSettings = Seq(
 )
 
 val commonSettings = Seq(
-  version := "0.1.1",
+  version := "0.1.2",
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((3, _)) =>
