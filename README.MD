@@ -13,14 +13,14 @@ The wrapper is intended to be thin and resemble the client.
 
 ## Usage
 
-cabbit is cross built for `scala "2.12.15" | "2.13.6" | "3.0.2"` & `ce2 | ce3`.
+cabbit is cross built for `scala "2.12.15" | "2.13.7" | "3.1.0"` & `ce2 | ce3`.
 Thus, you can choose from these artifacts:
 
-|               | `ce 3.2.9`(through `fs2 3.1.3`) | `ce 2.5.1` (through `fs2 2.5.9`) |
-|      ---      | --- | --- |
-| scala 2.12.15 | cabbit_2.12 | cabbit_ce2_2.12 |
-| scala 2.13.6  | cabbit_2.13 | cabbit_ce2_2.13 |
-| scala 3.0.2   | cabbit_3    | cabbit_ce2_3    |
+|               | `ce 3.2.9`(through `fs2 3.2.2`) | `ce 2.5.4` (through `fs2 2.5.10`) |
+|---------------|---------------------------------|-----------------------------------|
+| scala 2.12.15 | cabbit_2.12                     | cabbit_ce2_2.12                   |
+| scala 2.13.7  | cabbit_2.13                     | cabbit_ce2_2.13                   |
+| scala 3.1.0   | cabbit_3                        | cabbit_ce2_3                      |
 
 
 For ce3 versions add this instruction to your build.sbt:
