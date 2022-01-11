@@ -2,7 +2,6 @@ package ru.delimobil.cabbit
 
 import java.io.IOException
 import java.util.UUID
-
 import cats.data.Kleisli
 import cats.effect.Blocker
 import cats.effect.ContextShift

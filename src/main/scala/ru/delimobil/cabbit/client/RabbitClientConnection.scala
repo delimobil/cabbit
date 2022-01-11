@@ -12,12 +12,11 @@ import ru.delimobil.cabbit.api.ChannelDeclaration
 import ru.delimobil.cabbit.api.ChannelPublisher
 import ru.delimobil.cabbit.api.Connection
 import ru.delimobil.cabbit.ce.impl._
-import ru.delimobil.cabbit.client.poly.RabbitClientConsumerProvider
 
 private[client] final class RabbitClientConnection[F[_]: ConcurrentEffect: ContextShift](
     raw: client.Connection,
     blockerCE2: BlockerCE2,
-    consumerProvider: RabbitClientConsumerProvider[F, Stream]
+    consumerProvider: RabbitClientConsumerProvider[F, Stream[F, *]]
 ) extends Connection[F] {
 
   private val blocker = new BlockerDelegate[F](blockerCE2)

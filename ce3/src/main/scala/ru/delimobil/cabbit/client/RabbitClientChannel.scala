@@ -1,13 +1,11 @@
 package ru.delimobil.cabbit.client
 
 import cats.FlatMap
-import fs2.Stream
 import ru.delimobil.cabbit.api.Channel
-import ru.delimobil.cabbit.api.ChannelOnPool
-import ru.delimobil.cabbit.client.poly.RabbitClientConsumerProvider
+import ru.delimobil.cabbit.core.ChannelBlocking
 
 private[client] final class RabbitClientChannel[F[_]: FlatMap](
-    channel: ChannelOnPool[F],
-    consumerProvider: RabbitClientConsumerProvider[F, Stream]
-) extends poly.RabbitClientChannel[F, Stream](channel, consumerProvider)
+    channel: ChannelBlocking[F],
+    consumerProvider: RabbitClientConsumerProvider[F, fs2.Stream[F, *]]
+) extends RabbitClientChannelImpl[F, fs2.Stream[F, *]](channel, consumerProvider)
     with Channel[F]

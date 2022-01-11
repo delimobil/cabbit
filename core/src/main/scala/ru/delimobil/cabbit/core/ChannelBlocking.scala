@@ -1,8 +1,8 @@
-package ru.delimobil.cabbit.api
+package ru.delimobil.cabbit.core
 
 import com.rabbitmq.client
 
-trait ChannelOnPool[F[_]] extends ShutdownNotifier[F] {
+private[cabbit] trait ChannelBlocking[F[_]] {
 
   def delay[V](f: client.Channel => V): F[V]
 

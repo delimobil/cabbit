@@ -10,8 +10,6 @@ import fs2.Stream
 import ru.delimobil.cabbit.api.Connection
 import ru.delimobil.cabbit.api.ConnectionFactory
 import ru.delimobil.cabbit.client.consumer.QueueDeferredConsumerProvider
-import ru.delimobil.cabbit.client.poly.RabbitClientConsumerProvider
-
 import ru.delimobil.cabbit.CollectionConverters._
 
 private[cabbit] final class RabbitClientConnectionFactory[F[_]: ConcurrentEffect: ContextShift](
@@ -19,7 +17,7 @@ private[cabbit] final class RabbitClientConnectionFactory[F[_]: ConcurrentEffect
     factory: client.ConnectionFactory
 ) extends ConnectionFactory[F] {
 
-  private val consumerProvider: RabbitClientConsumerProvider[F, Stream] =
+  private val consumerProvider: RabbitClientConsumerProvider[F, Stream[F, *]] =
     new QueueDeferredConsumerProvider[F]
 
   def newConnection(

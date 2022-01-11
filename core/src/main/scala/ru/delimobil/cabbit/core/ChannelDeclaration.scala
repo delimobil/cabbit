@@ -1,4 +1,4 @@
-package ru.delimobil.cabbit.api
+package ru.delimobil.cabbit.core
 
 import com.rabbitmq.client.AMQP.Exchange
 import com.rabbitmq.client.AMQP.Queue
@@ -10,7 +10,7 @@ import ru.delimobil.cabbit.model.declaration.Declaration
 import ru.delimobil.cabbit.model.declaration.ExchangeDeclaration
 import ru.delimobil.cabbit.model.declaration.QueueDeclaration
 
-trait ChannelDeclaration[F[_]] extends ShutdownNotifier[F] {
+private[cabbit] trait ChannelDeclaration[F[_]] {
 
   def queueDeclare(queueDeclaration: QueueDeclaration): F[Queue.DeclareOk]
 

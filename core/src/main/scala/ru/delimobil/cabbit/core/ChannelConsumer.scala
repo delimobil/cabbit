@@ -1,11 +1,10 @@
-package ru.delimobil.cabbit.api.poly
+package ru.delimobil.cabbit.core
 
 import com.rabbitmq.client
-import ru.delimobil.cabbit.api.ChannelAcker
 import ru.delimobil.cabbit.model.ConsumerTag
 import ru.delimobil.cabbit.model.QueueName
 
-private[cabbit] trait ChannelConsumer[F[_], Stream[*[_], _]] extends ChannelAcker[F] {
+private[cabbit] trait ChannelConsumer[F[_], S[_]] {
 
   def basicQos(prefetchCount: Int): F[Unit]
 
@@ -22,7 +21,7 @@ private[cabbit] trait ChannelConsumer[F[_], Stream[*[_], _]] extends ChannelAcke
   def deliveryStream(
       queue: QueueName,
       prefetchCount: Int
-  ): F[(ConsumerTag, Stream[F, client.Delivery])]
+  ): F[(ConsumerTag, S[client.Delivery])]
 
   def basicCancel(consumerTag: ConsumerTag): F[Unit]
 }

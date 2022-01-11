@@ -4,7 +4,7 @@ import cats.Monad
 import cats.syntax.flatMap._
 import cats.syntax.functor._
 import com.rabbitmq.client
-import ru.delimobil.cabbit.api.ChannelOnPool
+import ru.delimobil.cabbit.core.ChannelBlocking
 import ru.delimobil.cabbit.ce.api.Blocker
 import ru.delimobil.cabbit.ce.api.SemaphoreMake
 
@@ -19,10 +19,10 @@ private[client] final class RabbitClientConnectionAction[F[_]: Monad: SemaphoreM
   def isOpen: F[Boolean] =
     blocker.delay(raw.isOpen)
 
-  def createChannelOnPool: F[(ChannelOnPool[F], F[Unit])] =
+  def createChannelOnPool: F[(ChannelBlocking[F], F[Unit])] =
     blocker
       .delay(raw.createChannel())
-      .flatMap(channel => RabbitClientChannelOnPool.make[F](channel, blocker))
+      .flatMap(channel => RabbitClientChannelWrapped.make[F](channel, blocker))
       .fproduct(_.close)
 
   private def closeUnsafe(): Unit =

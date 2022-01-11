@@ -28,13 +28,21 @@ val publishSettings = Seq(
 )
 
 val commonSettings = Seq(
-  version := "0.1.2",
+  version := "0.1.3",
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((3, _)) =>
-        Seq("-source:3.0-migration")
+        Seq("-source:3.0-migration", "-Ykind-projector:underscores")
       case Some((2, 13)) =>
         Seq("-deprecation", "-Xfatal-warnings")
+      case _ =>
+        Seq()
+    }
+  },
+  libraryDependencies ++= {
+    CrossVersion.partialVersion(scalaVersion.value) match {
+      case Some((2, _)) =>
+        Seq(compilerPlugin("org.typelevel" %% "kind-projector" % "0.13.2" cross CrossVersion.full))
       case _ =>
         Seq()
     }

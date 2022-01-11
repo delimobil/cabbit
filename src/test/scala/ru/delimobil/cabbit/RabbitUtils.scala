@@ -33,7 +33,10 @@ import ru.delimobil.cabbit.syntax._
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
 
-final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](conn: Connection[F], ch: Channel[F]) {
+final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](
+    conn: Connection[F],
+    ch: Channel[F]
+) {
 
   private val uuidIO: F[UUID] = Sync[F].delay(UUID.randomUUID())
   private val rndEx: F[ExchangeName] = uuidIO.map(uuid => ExchangeName(uuid.toString))
