@@ -24,7 +24,7 @@ private[cabbit] final class RabbitClientConnectionFactory[F[_]: Async](
     Sync[F]
       .blocking(factory.newConnection(addresses.asJava, appName.orNull))
       .map(new RabbitClientConnectionBlocker[F](_, new BlockerDelegate[F]))
-      .pipe(c => Resource.make(c)(_.close))
+      .pipe(Resource.make(_)(_.close))
       .product(ChannelDeferredConsumerProvider.make[F])
       .map { case (delegate, consumerProvider) =>
         val createChannelR = Resource(delegate.channel)

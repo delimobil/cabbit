@@ -3,7 +3,7 @@ package ru.delimobil.cabbit.client
 import cats.effect.Concurrent
 import cats.effect.Resource
 import cats.effect.Temporal
-import cats.effect.syntax.all._
+import cats.effect.syntax.temporal._
 import com.rabbitmq.client.Connection
 import ru.delimobil.cabbit.api
 import ru.delimobil.cabbit.ce.impl._

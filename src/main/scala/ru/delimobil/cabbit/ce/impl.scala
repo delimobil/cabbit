@@ -5,7 +5,7 @@ import cats.effect.ContextShift
 import cats.effect.Sync
 import cats.effect.Timer
 import cats.effect.concurrent.{Semaphore => SemaphoreCE2}
-import cats.effect.syntax.all._
+import cats.effect.syntax.concurrent._
 import cats.effect.{Blocker => BlockerCE2}
 import cats.syntax.functor._
 import ru.delimobil.cabbit.ce.api.Blocker

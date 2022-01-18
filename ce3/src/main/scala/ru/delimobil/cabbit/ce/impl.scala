@@ -5,7 +5,7 @@ import cats.effect.MonadCancelThrow
 import cats.effect.Temporal
 import cats.effect.kernel.Sync
 import cats.effect.std.{Semaphore => SemaphoreCE3}
-import cats.effect.syntax.all._
+import cats.effect.syntax.temporal._
 import cats.syntax.functor._
 import ru.delimobil.cabbit.ce.api._
 

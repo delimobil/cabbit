@@ -29,7 +29,7 @@ private[cabbit] final class RabbitClientConnectionFactory[F[_]: ConcurrentEffect
     blocker
       .delay(factory.newConnection(addresses.asJava, appName.orNull))
       .map(new RabbitClientConnectionBlocker[F](_, new BlockerDelegate[F](blocker)))
-      .pipe(c => Resource.make(c)(_.close))
+      .pipe(Resource.make(_)(_.close))
       .map { delegate =>
         val createChannelR = Resource(delegate.channel)
         val channelR = createChannelR.map(ch => new RabbitClientChannel(ch, consumerProvider))
