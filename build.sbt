@@ -7,7 +7,7 @@ val fs2VersionCE2 = "2.5.10"
 val fs2VersionCE3 = "3.2.2"
 val circeVersion = "0.14.1"
 val pureconfigVersion = "0.16.0"
-val amqpClientVersion =  "5.13.1"
+val amqpClientVersion = "5.13.1"
 
 val publishSettings = Seq(
   // sonatype config
@@ -16,13 +16,15 @@ val publishSettings = Seq(
   sonatypeRepository := "https://s01.oss.sonatype.org/service/local",
   licenses := Seq("APL2" -> url("http://www.apache.org/licenses/LICENSE-2.0.txt")),
   homepage := Some(url("https://github.com/delimobil/cabbit")),
-  scmInfo := Some(ScmInfo(url("https://github.com/delimobil/cabbit"), "scm:git@github.com/delimobil/cabbit.git")),
+  scmInfo := Some(
+    ScmInfo(url("https://github.com/delimobil/cabbit"), "scm:git@github.com/delimobil/cabbit.git")
+  ),
   developers := List(
     Developer(
       id = "nikiforo",
       name = "Artem Nikiforov",
       email = "anikiforov@delimobil.ru",
-      url = url("https://github.com/nikiforo"),
+      url = url("https://github.com/nikiforo")
     )
   )
 )
@@ -48,7 +50,7 @@ val core = (project in file("core"))
     name := "cabbit-core",
     libraryDependencies ++= Seq(
       "org.typelevel" %% "cats-core" % catsVersion,
-      "com.rabbitmq" % "amqp-client" % amqpClientVersion,
+      "com.rabbitmq" % "amqp-client" % amqpClientVersion
     )
   )
 
@@ -63,7 +65,7 @@ val root = (project in file("."))
         case Some((2, _)) =>
           List(
             "com.github.pureconfig" %% "pureconfig" % pureconfigVersion % Test,
-            "com.github.pureconfig" %% "pureconfig-cats" % pureconfigVersion % Test,
+            "com.github.pureconfig" %% "pureconfig-cats" % pureconfigVersion % Test
           )
         case _ =>
           Nil
@@ -72,10 +74,10 @@ val root = (project in file("."))
     libraryDependencies ++= Seq(
       "org.scalatest" %% "scalatest" % "3.2.10" % Test,
       "com.dimafeng" %% "testcontainers-scala-rabbitmq" % "0.39.12" % Test,
-      "org.slf4j" % "slf4j-simple" % "1.7.32" % Test,
+      "org.slf4j" % "slf4j-simple" % "1.7.33" % Test
     ),
     libraryDependencies += "co.fs2" %% "fs2-core" % fs2VersionCE2,
-    Test / publishArtifact := true,
+    Test / publishArtifact := true
   )
 
 val ce3 = (project in file("ce3"))
@@ -84,7 +86,7 @@ val ce3 = (project in file("ce3"))
   .settings(publishSettings)
   .settings(
     name := "cabbit",
-    libraryDependencies += "co.fs2" %% "fs2-core" % fs2VersionCE3,
+    libraryDependencies += "co.fs2" %% "fs2-core" % fs2VersionCE3
   )
 
 val circe = (project in file("circe"))
@@ -93,5 +95,5 @@ val circe = (project in file("circe"))
   .settings(publishSettings)
   .settings(
     name := "cabbit-circe",
-    libraryDependencies += "io.circe" %% "circe-core" % circeVersion,
+    libraryDependencies += "io.circe" %% "circe-core" % circeVersion
   )
