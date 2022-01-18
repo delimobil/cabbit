@@ -28,7 +28,7 @@ val publishSettings = Seq(
 )
 
 val commonSettings = Seq(
-  version := "0.1.3",
+  version := "0.2.0",
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((3, _)) =>

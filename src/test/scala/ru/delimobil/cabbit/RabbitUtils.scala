@@ -1,7 +1,5 @@
 package ru.delimobil.cabbit
 
-import java.util.UUID
-
 import cats.MonadError
 import cats.Parallel
 import cats.effect.ConcurrentEffect
@@ -17,6 +15,7 @@ import com.rabbitmq.client.AMQP.Queue
 import com.rabbitmq.client.BuiltinExchangeType
 import com.rabbitmq.client.Delivery
 import fs2.Stream
+import ru.delimobil.cabbit.RabbitUtils._
 import ru.delimobil.cabbit.api._
 import ru.delimobil.cabbit.model.ConsumerTag
 import ru.delimobil.cabbit.model.ContentEncoding.decodeUtf8
@@ -30,6 +29,7 @@ import ru.delimobil.cabbit.model.declaration.ExchangeDeclaration
 import ru.delimobil.cabbit.model.declaration.QueueDeclaration
 import ru.delimobil.cabbit.syntax._
 
+import java.util.UUID
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
 
@@ -144,4 +144,16 @@ final class RabbitUtils[F[_]: ConcurrentEffect: Parallel: Timer](
       val queue = QueueDeclaration(QueueName(uuid.toString))
       (channel1.queueDeclare(queue).attempt, channel2.queueDeclare(queue).attempt).parTupled
     }
+}
+
+object RabbitUtils {
+  /* Channel & Connection shouldn't have public method `isOpen`, because they
+     are created using Resource, which in turn MUST guarantee their correct state. */
+  implicit class isOpenChannelOps[F[_]](val ch: ChannelExtendable[F]) extends AnyVal {
+    def isOpen: F[Boolean] = ch.delay(_.isOpen)
+  }
+
+  implicit class isOpenConnectionOps[F[_]](val connection: ConnectionExtendable[F]) extends AnyVal {
+    def isOpen: F[Boolean] = connection.delay(_.isOpen)
+  }
 }

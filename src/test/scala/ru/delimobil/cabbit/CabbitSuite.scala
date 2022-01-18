@@ -1,7 +1,5 @@
 package ru.delimobil.cabbit
 
-import java.io.IOException
-import java.util.UUID
 import cats.data.Kleisli
 import cats.effect.Blocker
 import cats.effect.ContextShift
@@ -21,6 +19,7 @@ import fs2.Stream
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.funsuite.AnyFunSuite
 import ru.delimobil.cabbit.CollectionConverters._
+import ru.delimobil.cabbit.RabbitUtils._
 import ru.delimobil.cabbit.api._
 import ru.delimobil.cabbit.model.ContentEncoding._
 import ru.delimobil.cabbit.model.ExchangeName
@@ -31,6 +30,8 @@ import ru.delimobil.cabbit.model.declaration.BindDeclaration
 import ru.delimobil.cabbit.model.declaration.QueueDeclaration
 import ru.delimobil.cabbit.syntax._
 
+import java.io.IOException
+import java.util.UUID
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.Random
@@ -96,22 +97,35 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("connection is closed") {
-    val actual = checkShutdownNotifier[Connection[IO]](Resource.pure[IO, Connection[IO]](_))
-    assertResult((true, false))(actual)
+    val ((_, openDuringUse), openAfterUse) =
+      container
+        .makeConnection[IO](blocker)
+        .use(notifier => notifier.isOpen.tupleLeft(notifier))
+        .mproduct(_._1.isOpen)
+        .timeout(1.second)
+        .toIO
+        .unsafeRunSync()
+
+    assertResult((true, false))((openDuringUse, openAfterUse))
   }
 
   test("channel declaration is closed") {
-    val actual = checkShutdownNotifier[ChannelDeclaration[IO]](_.createChannelDeclaration)
+    val actual = checkChannelShutdown(_.createChannelDeclaration)
     assertResult((true, false))(actual)
   }
 
   test("channel publisher is closed") {
-    val actual = checkShutdownNotifier[ChannelPublisher[IO]](_.createChannelPublisher)
+    val actual = checkChannelShutdown(_.createChannelPublisher)
     assertResult((true, false))(actual)
   }
 
   test("channel consumer is closed") {
-    val actual = checkShutdownNotifier[ChannelConsumer[IO]](_.createChannelConsumer)
+    val actual = checkChannelShutdown(_.createChannelConsumer)
+    assertResult((true, false))(actual)
+  }
+
+  test("channel is closed") {
+    val actual = checkChannelShutdown(_.createChannel)
     assertResult((true, false))(actual)
   }
 
@@ -412,7 +426,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     }
   }
 
-  private def checkShutdownNotifier[T <: ShutdownNotifier[IO]](
+  private def checkChannelShutdown[T <: ChannelExtendable[IO]](
       f: Connection[IO] => Resource[IO, T]
   ): (Boolean, Boolean) = {
     val ((_, openDuringUse), openAfterUse) =
@@ -421,7 +435,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         .flatMap(f)
         .use(notifier => notifier.isOpen.tupleLeft(notifier))
         .mproduct(_._1.isOpen)
-        .timeout(100.millis)
+        .timeout(1.second)
         .toIO
         .unsafeRunSync()
 

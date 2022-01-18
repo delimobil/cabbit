@@ -10,23 +10,12 @@ import com.rabbitmq.client.AMQP.Exchange
 import com.rabbitmq.client.AMQP.Queue
 import com.rabbitmq.client.Method
 import ru.delimobil.cabbit.CollectionConverters._
-import ru.delimobil.cabbit.core.ChannelAcker
-import ru.delimobil.cabbit.core.ChannelBlocking
-import ru.delimobil.cabbit.core.ChannelConsumer
-import ru.delimobil.cabbit.core.ChannelDeclaration
-import ru.delimobil.cabbit.core.ChannelExtendable
-import ru.delimobil.cabbit.core.ChannelPublisher
-import ru.delimobil.cabbit.core.ShutdownNotifier
+import ru.delimobil.cabbit.core._
 import ru.delimobil.cabbit.encoder.BodyEncoder
-import ru.delimobil.cabbit.model.Confirmation
+import ru.delimobil.cabbit.model._
 import ru.delimobil.cabbit.model.Confirmation._
 import ru.delimobil.cabbit.model.ConsumerTag
-import ru.delimobil.cabbit.model.DeliveryTag
-import ru.delimobil.cabbit.model.ExchangeName
-import ru.delimobil.cabbit.model.MandatoryArgument
 import ru.delimobil.cabbit.model.MandatoryArgument._
-import ru.delimobil.cabbit.model.QueueName
-import ru.delimobil.cabbit.model.RoutingKey
 import ru.delimobil.cabbit.model.declaration.BindDeclaration
 import ru.delimobil.cabbit.model.declaration.Declaration
 import ru.delimobil.cabbit.model.declaration.ExchangeDeclaration
@@ -35,12 +24,7 @@ import ru.delimobil.cabbit.model.declaration.QueueDeclaration
 private[client] class RabbitClientChannelImpl[F[_]: FlatMap, S[_]](
     channel: ChannelBlocking[F],
     consumerProvider: RabbitClientConsumerProvider[F, S]
-) extends ChannelDeclaration[F]
-    with ChannelPublisher[F]
-    with ChannelAcker[F]
-    with ChannelConsumer[F, S]
-    with ShutdownNotifier[F]
-    with ChannelExtendable[F] {
+) extends Channel[F, S] {
 
   def basicQos(prefetchCount: Int): F[Unit] =
     channel.delay(_.basicQos(prefetchCount))
@@ -171,7 +155,4 @@ private[client] class RabbitClientChannelImpl[F[_]: FlatMap, S[_]](
 
   def delay[V](f: client.Channel => V): F[V] =
     channel.delay(f)
-
-  def isOpen: F[Boolean] =
-    channel.delay(_.isOpen)
 }
