@@ -5,14 +5,13 @@ import cats.syntax.applicativeError._
 import cats.syntax.flatMap._
 import com.rabbitmq.client
 import ru.delimobil.cabbit.ce.api._
-import ru.delimobil.cabbit.core.ChannelBlocking
 
 private[client] final class RabbitClientConnectionBlocker[F[_]: MonadThrow: SemaphoreMake](
     raw: client.Connection,
     blocker: Blocker[F]
 ) {
 
-  def channel: F[(ChannelBlocking[F], F[Unit])] = {
+  def channel: F[RabbitClientChannelBlocking[F]] = {
     val channel = blocker.delay(raw.createChannel())
     channel.flatMap(RabbitClientChannelBlocking.make[F](_, blocker))
   }

@@ -22,7 +22,7 @@ import ru.delimobil.cabbit.model.declaration.ExchangeDeclaration
 import ru.delimobil.cabbit.model.declaration.QueueDeclaration
 
 private[client] class RabbitClientChannelImpl[F[_]: FlatMap, S[_]](
-    channel: ChannelBlocking[F],
+    channel: RabbitClientChannelBlocking[F],
     consumerProvider: RabbitClientConsumerProvider[F, S]
 ) extends Channel[F, S] {
 

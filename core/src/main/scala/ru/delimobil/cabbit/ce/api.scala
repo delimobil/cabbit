@@ -2,7 +2,7 @@ package ru.delimobil.cabbit.ce
 
 import scala.concurrent.duration.FiniteDuration
 
-object api {
+private[cabbit] object api {
 
   trait Semaphore[F[_]] {
     def withPermit[V](action: F[V]): F[V]
