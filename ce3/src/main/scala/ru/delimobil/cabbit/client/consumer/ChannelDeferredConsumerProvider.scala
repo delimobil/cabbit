@@ -14,11 +14,11 @@ import com.rabbitmq.client.Envelope
 import com.rabbitmq.client.ShutdownSignalException
 import fs2.Stream
 import fs2.concurrent.Channel
-import ru.delimobil.cabbit.client.poly.RabbitClientConsumerProvider
+import ru.delimobil.cabbit.client.RabbitClientConsumerProvider
 
 private[client] final class ChannelDeferredConsumerProvider[F[_]: Async](
     dispatcher: Dispatcher[F]
-) extends RabbitClientConsumerProvider[F, Stream] {
+) extends RabbitClientConsumerProvider[F, Stream[F, *]] {
 
   def provide(prefetchCount: Int): F[(Consumer, Stream[F, Delivery])] =
     Channel

@@ -7,7 +7,8 @@ import scala.collection.JavaConverters
 private[cabbit] object CollectionConverters {
 
   implicit class argOps(val args: Arguments) extends AnyVal {
-    def asJava: java.util.Map[String, Object] = JavaConverters.mapAsJavaMap(args.asInstanceOf[Map[String, AnyRef]])
+    def asJava: java.util.Map[String, Object] =
+      JavaConverters.mapAsJavaMap(args.asInstanceOf[Map[String, AnyRef]])
   }
 
   implicit class listOps[V](val list: List[V]) extends AnyVal {

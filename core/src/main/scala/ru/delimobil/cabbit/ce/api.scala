@@ -1,5 +1,7 @@
 package ru.delimobil.cabbit.ce
 
+import scala.concurrent.duration.FiniteDuration
+
 private[cabbit] object api {
 
   trait Semaphore[F[_]] {
@@ -10,11 +12,11 @@ private[cabbit] object api {
     def make(n: Long): F[Semaphore[F]]
   }
 
-  object SemaphoreMake {
-    def apply[F[_]](implicit ev: SemaphoreMake[F]): SemaphoreMake[F] = ev
-  }
-
   trait Blocker[F[_]] {
     def delay[V](f: => V): F[V]
+  }
+
+  trait Timeouter[F[_]] {
+    def timeout[V](action: F[V], dur: FiniteDuration): F[V]
   }
 }

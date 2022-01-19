@@ -1,4 +1,4 @@
-package ru.delimobil.cabbit.client.poly
+package ru.delimobil.cabbit.client
 
 import cats.FlatMap
 import cats.syntax.apply._
@@ -10,27 +10,21 @@ import com.rabbitmq.client.AMQP.Exchange
 import com.rabbitmq.client.AMQP.Queue
 import com.rabbitmq.client.Method
 import ru.delimobil.cabbit.CollectionConverters._
-import ru.delimobil.cabbit.api.ChannelAcker._
-import ru.delimobil.cabbit.api.ChannelPublisher.MandatoryArgument
-import ru.delimobil.cabbit.api._
-import ru.delimobil.cabbit.api.poly.ChannelConsumer
+import ru.delimobil.cabbit.core._
 import ru.delimobil.cabbit.encoder.BodyEncoder
+import ru.delimobil.cabbit.model._
+import ru.delimobil.cabbit.model.Confirmation._
 import ru.delimobil.cabbit.model.ConsumerTag
-import ru.delimobil.cabbit.model.DeliveryTag
-import ru.delimobil.cabbit.model.ExchangeName
-import ru.delimobil.cabbit.model.QueueName
-import ru.delimobil.cabbit.model.RoutingKey
+import ru.delimobil.cabbit.model.MandatoryArgument._
 import ru.delimobil.cabbit.model.declaration.BindDeclaration
 import ru.delimobil.cabbit.model.declaration.Declaration
 import ru.delimobil.cabbit.model.declaration.ExchangeDeclaration
 import ru.delimobil.cabbit.model.declaration.QueueDeclaration
 
-private[client] class RabbitClientChannel[F[_]: FlatMap, Stream[*[_], _]](
-    channel: ChannelOnPool[F],
-    consumerProvider: RabbitClientConsumerProvider[F, Stream]
-) extends ChannelDeclaration[F]
-    with ChannelPublisher[F]
-    with ChannelConsumer[F, Stream] {
+private[client] class RabbitClientChannelImpl[F[_]: FlatMap, S[_]](
+    channel: RabbitClientChannelBlocking[F],
+    consumerProvider: RabbitClientConsumerProvider[F, S]
+) extends Channel[F, S] {
 
   def basicQos(prefetchCount: Int): F[Unit] =
     channel.delay(_.basicQos(prefetchCount))
@@ -51,7 +45,7 @@ private[client] class RabbitClientChannel[F[_]: FlatMap, Stream[*[_], _]](
   def deliveryStream(
       queueName: QueueName,
       prefetchCount: Int
-  ): F[(ConsumerTag, Stream[F, client.Delivery])] =
+  ): F[(ConsumerTag, S[client.Delivery])] =
     basicQos(prefetchCount)
       .productR(consumerProvider.provide(prefetchCount))
       .flatMap { case (consumer, stream) => basicConsume(queueName, consumer).tupleRight(stream) }
@@ -70,9 +64,9 @@ private[client] class RabbitClientChannel[F[_]: FlatMap, Stream[*[_], _]](
 
   def basicConfirm(outcome: Confirmation): F[Unit] =
     outcome match {
-      case Ack(tag, multiple) => basicAck(tag, multiple)
+      case Ack(tag, multiple)           => basicAck(tag, multiple)
       case Nack(tag, multiple, requeue) => basicNack(tag, multiple, requeue)
-      case Reject(tag, requeue) => basicReject(tag, requeue)
+      case Reject(tag, requeue)         => basicReject(tag, requeue)
     }
 
   def queueDeclare(queueDeclaration: QueueDeclaration): F[Queue.DeclareOk] =
@@ -127,7 +121,7 @@ private[client] class RabbitClientChannel[F[_]: FlatMap, Stream[*[_], _]](
   def basicPublishDirect[V](
       queueName: QueueName,
       body: V,
-      mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
+      mandatory: MandatoryArgument = NonMandatory,
       properties: BasicProperties = new BasicProperties()
   )(implicit encoder: BodyEncoder[V]): F[Unit] =
     basicPublish(ExchangeName.default, RoutingKey(queueName.name), body, mandatory, properties)
@@ -135,7 +129,7 @@ private[client] class RabbitClientChannel[F[_]: FlatMap, Stream[*[_], _]](
   def basicPublishFanout[V](
       exchangeName: ExchangeName,
       body: V,
-      mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
+      mandatory: MandatoryArgument = NonMandatory,
       properties: BasicProperties = new BasicProperties()
   )(implicit encoder: BodyEncoder[V]): F[Unit] =
     basicPublish(exchangeName, RoutingKey.default, body, mandatory, properties)
@@ -144,7 +138,7 @@ private[client] class RabbitClientChannel[F[_]: FlatMap, Stream[*[_], _]](
       exchangeName: ExchangeName,
       routingKey: RoutingKey,
       body: V,
-      mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
+      mandatory: MandatoryArgument = NonMandatory,
       properties: BasicProperties = new BasicProperties()
   )(implicit encoder: BodyEncoder[V]): F[Unit] = {
     val props = encoder.alterProps(properties)
@@ -161,7 +155,4 @@ private[client] class RabbitClientChannel[F[_]: FlatMap, Stream[*[_], _]](
 
   def delay[V](f: client.Channel => V): F[V] =
     channel.delay(f)
-
-  def isOpen: F[Boolean] =
-    channel.isOpen
 }
