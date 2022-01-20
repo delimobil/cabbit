@@ -2,6 +2,7 @@ package ru.delimobil.cabbit
 
 import cats.effect.Resource
 import cats.effect.kernel.Async
+import cats.effect.syntax.temporal._
 import com.rabbitmq.client.Address
 import com.rabbitmq.client.{ConnectionFactory => JConnectionFactory}
 import ru.delimobil.cabbit.api.ConnectionFactory
@@ -46,7 +47,7 @@ object ConnectionFactoryProvider {
         delegatee
           .newConnection(addresses, appName)
           .map(new ConnectionTimeouted(_, timeout))
-//          .timeout(timeout) FIXME
+          .timeout(timeout)
     }
   }
 
