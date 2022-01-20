@@ -16,13 +16,13 @@ final class ConnectionTimeouted[F[_]: Concurrent: Temporal](
 ) extends api.Connection[F] {
 
   def createChannelDeclaration: Resource[F, api.ChannelDeclaration[F]] =
-    createChannel // .timeout(duration) FIXME
+    createChannel.timeout(duration)
 
   def createChannelPublisher: Resource[F, api.ChannelPublisher[F]] =
-    createChannel // .timeout(duration) FIXME
+    createChannel.timeout(duration)
 
   def createChannelConsumer: Resource[F, api.ChannelConsumer[F]] =
-    createChannel // .timeout(duration) FIXME
+    createChannel.timeout(duration)
 
   def createChannel: Resource[F, api.Channel[F]] =
     delegatee.createChannel.map(ch => new ChannelTimeouted(ch, duration))
