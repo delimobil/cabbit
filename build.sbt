@@ -10,7 +10,7 @@ val circeVersion = "0.14.1"
 val amqpClientVersion = "5.13.1"
 
 val pureconfigVersion = "0.17.1"
-val scalatestVersion = "3.2.10"
+val scalatestVersion = "3.2.11"
 val testContainersVersion = "0.39.12"
 val slf4jVersion = "1.7.33"
 
