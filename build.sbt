@@ -11,7 +11,7 @@ val amqpClientVersion = "5.13.1"
 
 val pureconfigVersion = "0.17.1"
 val scalatestVersion = "3.2.11"
-val testContainersVersion = "0.40.1"
+val testContainersVersion = "0.40.2"
 val slf4jVersion = "1.7.36"
 
 val publishSettings = Seq(
