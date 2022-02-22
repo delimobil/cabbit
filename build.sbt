@@ -35,7 +35,7 @@ val publishSettings = Seq(
 )
 
 val commonSettings = Seq(
-  version := "0.2.0",
+  version := "0.2.0-SNAPSHOT",
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((3, _)) =>
@@ -105,7 +105,11 @@ val ce3 = (project in file("ce3"))
   .settings(publishSettings)
   .settings(
     name := "cabbit",
-    libraryDependencies += "co.fs2" %% "fs2-core" % fs2VersionCE3
+    libraryDependencies ++= Seq(
+      "co.fs2" %% "fs2-core" % fs2VersionCE3,
+      "com.dimafeng" %% "testcontainers-scala-rabbitmq" % testContainersVersion % Test,
+    ),
+    Test / publishArtifact := true
   )
 
 val circe = (project in file("circe"))
