@@ -1,17 +1,15 @@
 package ru.delimobil.cabbit
 
 import cats.data.Kleisli
-import cats.effect.Blocker
-import cats.effect.ContextShift
 import cats.effect.IO
 import cats.effect.Resource
-import cats.effect.Timer
-import cats.effect.syntax.effect._
+import cats.effect.Temporal
+import cats.effect.std.Dispatcher
+import cats.effect.unsafe.implicits.global
 import cats.syntax.apply._
 import cats.syntax.flatMap._
 import cats.syntax.foldable._
 import cats.syntax.functor._
-import cats.syntax.semigroupal._
 import com.rabbitmq.client.AMQP.Queue.DeclareOk
 import com.rabbitmq.client.GetResponse
 import com.rabbitmq.client.ShutdownSignalException
@@ -32,7 +30,6 @@ import ru.delimobil.cabbit.syntax._
 
 import java.io.IOException
 import java.util.UUID
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.util.Random
 
@@ -42,15 +39,11 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
   private type CheckGetFunc = Kleisli[IO, QueueName, GetResponse]
 
-  private implicit val cs: ContextShift[IO] = IO.contextShift(ExecutionContext.global)
-  private implicit val timer: Timer[IO] = IO.timer(scala.concurrent.ExecutionContext.global)
-
-  private val sleep = timer.sleep(100.millis)
+  private val sleep = Temporal[IO].sleep(100.millis)
   private val rndQueue = IO.delay(QueueName(UUID.randomUUID().toString))
 
   private var container: RabbitContainer = _
   private var shutdownIO: IO[Unit] = _
-  private var blocker: Blocker = _
   private var connection: Connection[IO] = _
   private var channel: Channel[IO] = _
   private var rabbitUtils: RabbitUtils[IO] = _
@@ -71,20 +64,19 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
       .eval(RabbitContainer[IO])
       .flatMap { case (cont, shutdown) =>
         for {
-          block <- Blocker[IO]
-          conn <- cont.makeConnection[IO](block)
+          conn <- cont.makeConnection[IO]
           ch <- conn.createChannel
-        } yield (cont, shutdown, block, conn, ch)
+          dispatcher <- Dispatcher[IO]
+        } yield (cont, shutdown, dispatcher, conn, ch)
       }
       .allocated
-      .flatTap { case ((cont, shutdown, block, conn, ch), closeAction) =>
+      .flatTap { case ((cont, shutdown, dispatcher, conn, ch), closeAction) =>
         IO.delay {
           container = cont
           shutdownIO = shutdown
-          blocker = block
           connection = conn
           channel = ch
-          rabbitUtils = new RabbitUtils[IO](conn, ch)
+          rabbitUtils = new RabbitUtils[IO](conn, ch, dispatcher)
           closeIO = closeAction
         }
       }
@@ -97,14 +89,9 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   }
 
   test("connection is closed") {
-    val ((_, openDuringUse), openAfterUse) =
-      container
-        .makeConnection[IO](blocker)
-        .use(notifier => notifier.isOpen.tupleLeft(notifier))
-        .mproduct(_._1.isOpen)
-        .timeout(1.second)
-        .toIO
-        .unsafeRunSync()
+    val tuple = container.makeConnection[IO].use(notifier => notifier.isOpen.tupleLeft(notifier))
+    val action = tuple.mproduct(_._1.isOpen).timeout(1.second)
+    val ((_, openDuringUse), openAfterUse) = action.unsafeRunSync()
 
     assertResult((true, false))((openDuringUse, openAfterUse))
   }
@@ -210,7 +197,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         _ <- messages.traverse_(channel.basicPublishFanout(bind.exchangeName, _))
         stream <- channel.deliveryStream(bind.queueName, prefetched)
         _ <- sleep
-        declareOk <- channel.queueDeclare(rabbitUtils.getQueue(bind.queueName, qProps))
+        declareOk <- channel.queueDeclare(QueueDeclaration(bind.queueName, arguments = qProps))
         bodies <- rabbitUtils.timedRead(stream)
         _ = assert(declareOk.getConsumerCount == 1)
         _ = assert(declareOk.getMessageCount == (maxMessages - prefetched))
@@ -234,7 +221,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
   test("two exclusive queues on one connection should work") {
     container
-      .makeConnection[IO](blocker)
+      .makeConnection[IO]
       .flatMap(conn => tupled(conn.createChannelDeclaration, conn.createChannelDeclaration))
       .use { case (channel1, channel2) =>
         rabbitUtils
@@ -246,7 +233,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
 
   test("only one of two exclusive queues on different connections should work") {
     val connRes =
-      container.makeConnection[IO](blocker).flatMap(c => c.createChannelDeclaration.map((c, _)))
+      container.makeConnection[IO].flatMap(c => c.createChannelDeclaration.map((c, _)))
 
     tupled(connRes, connRes)
       .use { case ((conn1, channel1), (conn2, channel2)) =>
@@ -404,7 +391,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
       for {
         bind <- rabbitUtils.bindedIO(args)
         _ <- channel.basicPublishFanout(bind.exchangeName, message)
-        _ <- timer.sleep(ttl.millis)
+        _ <- Temporal[IO].sleep(ttl.millis)
         empty <- rabbitUtils.readAck(bind.queueName)
         dead <- rabbitUtils.readAck(deadLetterBind.queueName)
         _ = assert(empty == List.empty)
@@ -429,17 +416,9 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
   private def checkChannelShutdown[T <: ChannelExtendable[IO]](
       f: Connection[IO] => Resource[IO, T]
   ): (Boolean, Boolean) = {
-    val ((_, openDuringUse), openAfterUse) =
-      container
-        .makeConnection[IO](blocker)
-        .flatMap(f)
-        .use(notifier => notifier.isOpen.tupleLeft(notifier))
-        .mproduct(_._1.isOpen)
-        .timeout(1.second)
-        .toIO
-        .unsafeRunSync()
-
-    (openDuringUse, openAfterUse)
+    val action = container.makeConnection[IO].flatMap(f).use(v => v.isOpen.tupleLeft(v))
+    val ((_, open), openAfter) = action.mproduct(_._1.isOpen).timeout(1.second).unsafeRunSync()
+    (open, openAfter)
   }
 
   private def checkGet(msgCount: Int, io: CheckGetFunc): Unit = {
@@ -451,7 +430,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         _ <- channel.basicPublishFanout(bind.exchangeName, message)
         response <- io.run(bind.queueName)
         _ <- sleep
-        declareOk <- channel.queueDeclare(rabbitUtils.getQueue(bind.queueName, qProps))
+        declareOk <- channel.queueDeclare(QueueDeclaration(bind.queueName, arguments = qProps))
         _ = assert(decodeUtf8(response.getBody) === message)
         _ = assert(declareOk.getConsumerCount === 0)
         _ = assert(declareOk.getMessageCount === msgCount)

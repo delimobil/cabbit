@@ -31,11 +31,11 @@ class RabbitContainer private {
 
 object RabbitContainer {
 
-  def apply[F[_]: Async]: F[(RabbitContainer, F[Unit])] =
+  def apply[F[_]: Sync]: F[(RabbitContainer, F[Unit])] =
     Sync[F]
       .delay(new RabbitContainer)
       .map(provider => (provider, Sync[F].delay(provider.container.stop())))
 
-  def make[F[_]: Async]: Resource[F, RabbitContainer] =
+  def make[F[_]: Sync]: Resource[F, RabbitContainer] =
     Resource.apply(apply[F])
 }
