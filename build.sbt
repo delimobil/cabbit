@@ -35,7 +35,7 @@ val publishSettings = Seq(
 )
 
 val commonSettings = Seq(
-  version := "0.2.0",
+  version := "0.2.0-RC1",
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((3, _)) =>
@@ -79,6 +79,21 @@ val root = (project in file("."))
   .settings(publishSettings)
   .settings(
     name := "cabbit_ce2",
+    libraryDependencies += "co.fs2" %% "fs2-core" % fs2VersionCE2,
+    Test / publishArtifact := true
+  )
+
+val ce3 = (project in file("ce3"))
+  .dependsOn(core)
+  .settings(commonSettings)
+  .settings(publishSettings)
+  .settings(
+    name := "cabbit",
+    libraryDependencies ++= Seq(
+      "org.scalatest" %% "scalatest" % scalatestVersion % Test,
+      "com.dimafeng" %% "testcontainers-scala-rabbitmq" % testContainersVersion % Test,
+      "org.slf4j" % "slf4j-simple" % slf4jVersion % Test
+    ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
         case Some((2, _)) =>
@@ -91,21 +106,10 @@ val root = (project in file("."))
       }
     },
     libraryDependencies ++= Seq(
-      "org.scalatest" %% "scalatest" % scalatestVersion % Test,
+      "co.fs2" %% "fs2-core" % fs2VersionCE3,
       "com.dimafeng" %% "testcontainers-scala-rabbitmq" % testContainersVersion % Test,
-      "org.slf4j" % "slf4j-simple" % slf4jVersion % Test
     ),
-    libraryDependencies += "co.fs2" %% "fs2-core" % fs2VersionCE2,
     Test / publishArtifact := true
-  )
-
-val ce3 = (project in file("ce3"))
-  .dependsOn(core)
-  .settings(commonSettings)
-  .settings(publishSettings)
-  .settings(
-    name := "cabbit",
-    libraryDependencies += "co.fs2" %% "fs2-core" % fs2VersionCE3
   )
 
 val circe = (project in file("circe"))
