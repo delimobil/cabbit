@@ -107,7 +107,7 @@ val ce3 = (project in file("ce3"))
     },
     libraryDependencies ++= Seq(
       "co.fs2" %% "fs2-core" % fs2VersionCE3,
-      "com.dimafeng" %% "testcontainers-scala-rabbitmq" % testContainersVersion % Test,
+      "com.dimafeng" %% "testcontainers-scala-rabbitmq" % testContainersVersion % Test
     ),
     Test / publishArtifact := true
   )
