@@ -13,14 +13,14 @@ private[cabbit] trait ChannelPublisher[F[_]] {
       queueName: QueueName,
       body: V,
       mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
-      properties: BasicProperties = new BasicProperties()
+      properties: BasicProperties = new BasicProperties
   )(implicit encoder: BodyEncoder[V]): F[Unit]
 
   def basicPublishFanout[V](
       exchangeName: ExchangeName,
       body: V,
       mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
-      properties: BasicProperties = new BasicProperties()
+      properties: BasicProperties = new BasicProperties
   )(implicit encoder: BodyEncoder[V]): F[Unit]
 
   def basicPublish[V](
@@ -28,6 +28,6 @@ private[cabbit] trait ChannelPublisher[F[_]] {
       routingKey: RoutingKey,
       body: V,
       mandatory: MandatoryArgument = MandatoryArgument.NonMandatory,
-      properties: BasicProperties = new BasicProperties()
+      properties: BasicProperties = new BasicProperties
   )(implicit encoder: BodyEncoder[V]): F[Unit]
 }

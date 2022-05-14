@@ -38,11 +38,11 @@ val commonSettings = Seq(
   version := "0.2.0-RC1",
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((3, _)) =>
+      case Some(3, _) =>
         Seq("-source:3.0-migration", "-Ykind-projector:underscores")
-      case Some((2, 13)) =>
+      case Some(2, 13) =>
         Seq("-deprecation", "-Xfatal-warnings")
-      case Some((2, 12)) =>
+      case Some(2, 12) =>
         Seq("-Ypartial-unification")
       case _ =>
         Seq()
@@ -50,7 +50,7 @@ val commonSettings = Seq(
   },
   libraryDependencies ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, _)) =>
+      case Some(2, _) =>
         Seq(
           compilerPlugin(
             ("org.typelevel" %% "kind-projector" % kindProjectorVersion).cross(CrossVersion.full)
@@ -96,7 +96,7 @@ val ce3 = (project in file("ce3"))
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, _)) =>
+        case Some(2, _) =>
           List(
             "com.github.pureconfig" %% "pureconfig" % pureconfigVersion % Test,
             "com.github.pureconfig" %% "pureconfig-cats" % pureconfigVersion % Test

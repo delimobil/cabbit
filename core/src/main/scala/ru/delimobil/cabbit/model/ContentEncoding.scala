@@ -43,7 +43,7 @@ object ContentEncoding {
 
   private def java8ReadAllBytes(gzipInputStream: GZIPInputStream): Array[Byte] = {
     val buffer = new Array[Byte](1024)
-    val byteOutputStream = new ByteArrayOutputStream()
+    val byteOutputStream = new ByteArrayOutputStream
     var len = 0
     while ({
       len = gzipInputStream.read(buffer)

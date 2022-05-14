@@ -200,7 +200,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         declareOk <- channel.queueDeclare(QueueDeclaration(bind.queueName, arguments = qProps))
         bodies <- rabbitUtils.timedRead(stream)
         _ = assert(declareOk.getConsumerCount == 1)
-        _ = assert(declareOk.getMessageCount == (maxMessages - prefetched))
+        _ = assert(declareOk.getMessageCount == maxMessages - prefetched)
         _ = assert(messages == bodies)
       } yield {}
     }

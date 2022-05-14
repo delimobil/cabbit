@@ -39,7 +39,7 @@ object CabbitConfig {
         context: Option[SSLContext],
         saslConfig: SaslConfig
     ): client.ConnectionFactory = {
-      val factory = new client.ConnectionFactory()
+      val factory = new client.ConnectionFactory
 
       val firstNode = config.nodes.head
       factory.setHost(firstNode.host)

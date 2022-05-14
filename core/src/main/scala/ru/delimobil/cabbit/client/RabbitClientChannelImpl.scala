@@ -122,7 +122,7 @@ private[client] class RabbitClientChannelImpl[F[_]: FlatMap, S[_]](
       queueName: QueueName,
       body: V,
       mandatory: MandatoryArgument = NonMandatory,
-      properties: BasicProperties = new BasicProperties()
+      properties: BasicProperties = new BasicProperties
   )(implicit encoder: BodyEncoder[V]): F[Unit] =
     basicPublish(ExchangeName.default, RoutingKey(queueName.name), body, mandatory, properties)
 
@@ -130,7 +130,7 @@ private[client] class RabbitClientChannelImpl[F[_]: FlatMap, S[_]](
       exchangeName: ExchangeName,
       body: V,
       mandatory: MandatoryArgument = NonMandatory,
-      properties: BasicProperties = new BasicProperties()
+      properties: BasicProperties = new BasicProperties
   )(implicit encoder: BodyEncoder[V]): F[Unit] =
     basicPublish(exchangeName, RoutingKey.default, body, mandatory, properties)
 
@@ -139,7 +139,7 @@ private[client] class RabbitClientChannelImpl[F[_]: FlatMap, S[_]](
       routingKey: RoutingKey,
       body: V,
       mandatory: MandatoryArgument = NonMandatory,
-      properties: BasicProperties = new BasicProperties()
+      properties: BasicProperties = new BasicProperties
   )(implicit encoder: BodyEncoder[V]): F[Unit] = {
     val props = encoder.alterProps(properties)
     channel.delay(
