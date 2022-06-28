@@ -36,7 +36,7 @@ import scala.reflect.ClassTag
 final class RabbitUtils[F[_]: Async](
     conn: Connection[F],
     ch: Channel[F],
-    dispatcher: Dispatcher[F],
+    dispatcher: Dispatcher[F]
 ) {
 
   private val uuidIO: F[UUID] = Sync[F].delay(UUID.randomUUID())
@@ -44,9 +44,9 @@ final class RabbitUtils[F[_]: Async](
   private val rndQu: F[QueueName] = uuidIO.map(uuid => QueueName(uuid.toString))
 
   def bindQueueToExchangeIO(
-    exName: ExchangeName,
-    rk: RoutingKey,
-    qProps: Arguments
+      exName: ExchangeName,
+      rk: RoutingKey,
+      qProps: Arguments
   ): F[BindDeclaration] =
     for {
       qName <- rndQu
@@ -68,7 +68,12 @@ final class RabbitUtils[F[_]: Async](
       ack: Delivery => F[Unit] = d => ch.basicAck(d.deliveryTag, multiple = false)
   ): F[List[String]] = {
     val background = Stream.exec(halt *> ch.basicCancel(tuple._1))
-    tuple._2.evalTap(ack).concurrently(background).compile.toList.map(_.map(d => decodeUtf8(d.getBody)))
+    tuple._2
+      .evalTap(ack)
+      .concurrently(background)
+      .compile
+      .toList
+      .map(_.map(d => decodeUtf8(d.getBody)))
   }
 
   def readAck(queue: QueueName, halt: F[Unit] = Temporal[F].sleep(150.millis)): F[List[String]] =
@@ -114,7 +119,7 @@ final class RabbitUtils[F[_]: Async](
     dispatcher.unsafeRunSync(alternateExchangeIO(rk).flatMap(testFunc.tupled))
 
   def spoilChannel[E <: Throwable](
-    f: Channel[F] => F[Unit]
+      f: Channel[F] => F[Unit]
   )(implicit classTag: ClassTag[E]): Unit =
     dispatcher.unsafeRunSync(conn.createChannel.use(ch => validateError(f, ch)))
 
@@ -128,8 +133,8 @@ final class RabbitUtils[F[_]: Async](
     }
 
   private def validateError[E <: Throwable](
-    f: Channel[F] => F[Unit],
-    ch: Channel[F],
+      f: Channel[F] => F[Unit],
+      ch: Channel[F]
   )(implicit classTag: ClassTag[E]): F[Unit] =
     f(ch).attempt.flatMap {
       case Left(ex) =>

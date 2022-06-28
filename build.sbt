@@ -1,6 +1,6 @@
 ThisBuild / organization := "ru.delimobil"
 ThisBuild / scalaVersion := "2.13.8"
-ThisBuild / crossScalaVersions ++= Seq("2.12.15", "3.1.1")
+ThisBuild / crossScalaVersions ++= Seq("2.12.15", "3.1.2")
 
 val kindProjectorVersion = "0.13.2"
 val catsVersion = "2.6.1"
@@ -11,7 +11,7 @@ val amqpClientVersion = "5.13.1"
 
 val pureconfigVersion = "0.17.1"
 val scalatestVersion = "3.2.11"
-val testContainersVersion = "0.40.1"
+val testContainersVersion = "0.40.2"
 val slf4jVersion = "1.7.36"
 
 val publishSettings = Seq(
@@ -106,7 +106,7 @@ val ce3 = (project in file("ce3"))
     },
     libraryDependencies ++= Seq(
       "co.fs2" %% "fs2-core" % fs2VersionCE3,
-      "com.dimafeng" %% "testcontainers-scala-rabbitmq" % testContainersVersion % Test,
+      "com.dimafeng" %% "testcontainers-scala-rabbitmq" % testContainersVersion % Test
     ),
     Test / publishArtifact := true
   )
