@@ -5,7 +5,7 @@ ThisBuild / crossScalaVersions ++= Seq("2.12.15", "3.1.2")
 val kindProjectorVersion = "0.13.2"
 val catsVersion = "2.6.1"
 val fs2VersionCE2 = "2.5.11"
-val fs2VersionCE3 = "3.2.4"
+val fs2VersionCE3 = "3.2.8"
 val circeVersion = "0.14.1"
 val amqpClientVersion = "5.13.1"
 
@@ -35,7 +35,7 @@ val publishSettings = Seq(
 )
 
 val commonSettings = Seq(
-  version := "0.2.0-RC1",
+  version := "0.2.0-RC2",
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((3, _)) =>
@@ -80,7 +80,6 @@ val root = (project in file("."))
   .settings(
     name := "cabbit_ce2",
     libraryDependencies += "co.fs2" %% "fs2-core" % fs2VersionCE2,
-    Test / publishArtifact := true
   )
 
 val ce3 = (project in file("ce3"))
