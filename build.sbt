@@ -1,6 +1,6 @@
 ThisBuild / organization := "ru.delimobil"
 ThisBuild / scalaVersion := "2.13.8"
-ThisBuild / crossScalaVersions ++= Seq("2.12.15", "3.1.2")
+ThisBuild / crossScalaVersions ++= Seq("2.12.15", "3.1.3")
 
 val kindProjectorVersion = "0.13.2"
 val catsVersion = "2.6.1"
@@ -38,11 +38,11 @@ val commonSettings = Seq(
   version := "0.2.0-RC2",
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((3, _)) =>
+      case Some(3, _) =>
         Seq("-source:3.0-migration", "-Ykind-projector:underscores")
-      case Some((2, 13)) =>
+      case Some(2, 13) =>
         Seq("-deprecation", "-Xfatal-warnings")
-      case Some((2, 12)) =>
+      case Some(2, 12) =>
         Seq("-Ypartial-unification")
       case _ =>
         Seq()
@@ -50,7 +50,7 @@ val commonSettings = Seq(
   },
   libraryDependencies ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
-      case Some((2, _)) =>
+      case Some(2, _) =>
         Seq(
           compilerPlugin(
             ("org.typelevel" %% "kind-projector" % kindProjectorVersion).cross(CrossVersion.full)
@@ -79,7 +79,7 @@ val root = (project in file("."))
   .settings(publishSettings)
   .settings(
     name := "cabbit_ce2",
-    libraryDependencies += "co.fs2" %% "fs2-core" % fs2VersionCE2,
+    libraryDependencies += "co.fs2" %% "fs2-core" % fs2VersionCE2
   )
 
 val ce3 = (project in file("ce3"))
@@ -95,7 +95,7 @@ val ce3 = (project in file("ce3"))
     ),
     libraryDependencies ++= {
       CrossVersion.partialVersion(scalaVersion.value) match {
-        case Some((2, _)) =>
+        case Some(2, _) =>
           List(
             "com.github.pureconfig" %% "pureconfig" % pureconfigVersion % Test,
             "com.github.pureconfig" %% "pureconfig-cats" % pureconfigVersion % Test
