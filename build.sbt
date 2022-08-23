@@ -79,7 +79,7 @@ val root = (project in file("."))
   .settings(publishSettings)
   .settings(
     name := "cabbit_ce2",
-    libraryDependencies += "co.fs2" %% "fs2-core" % fs2VersionCE2,
+    libraryDependencies += "co.fs2" %% "fs2-core" % fs2VersionCE2
   )
 
 val ce3 = (project in file("ce3"))
