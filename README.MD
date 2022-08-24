@@ -1,7 +1,7 @@
 cabbit
 =============
 
-[![Latest version](https://img.shields.io/badge/cabbit-0.2.0--rc1-orange)](https://github.com/delimobil/cabbit)
+[![Latest version](https://img.shields.io/badge/cabbit-0.2.0--RC3-orange)](https://github.com/delimobil/cabbit)
 
 A [cabbit] is a fictional hybrid between a cat and a rabbit.
 
@@ -13,24 +13,24 @@ The wrapper is intended to be thin and resemble the client.
 
 ## Usage
 
-cabbit is cross built for `scala "2.12.15" | "2.13.8" | "3.1.1"` & `ce2 | ce3`.
+cabbit is cross built for `scala "2.12" | "2.13" | "3.1"` & `ce2 | ce3`.
 Thus, you can choose from these artifacts:
 
-|               | `fs2 3.2.4`) | `fs2 2.5.10`)   |
-|---------------|--------------|-----------------|
-| scala 2.12.15 | cabbit_2.12  | cabbit_ce2_2.12 |
-| scala 2.13.8  | cabbit_2.13  | cabbit_ce2_2.13 |
-| scala 3.1.1   | cabbit_3     | cabbit_ce2_3    |
+|            | `fs2 3.2.4` | `fs2 2.5.10`    |
+|------------|-------------|-----------------|
+| scala 2.12 | cabbit_2.12 | cabbit_ce2_2.12 |
+| scala 2.13 | cabbit_2.13 | cabbit_ce2_2.13 |
+| scala 3.1  | cabbit_3    | cabbit_ce2_3    |
 
 
 For ce3 versions add this instruction to your build.sbt:
 ```sbt
-libraryDependencies += "ru.delimobil" %% "cabbit" % "0.2.0-rc1"
+libraryDependencies += "ru.delimobil" %% "cabbit" % "0.2.0-RC3"
 ```
 For ce2 versions replace `cabbit` with `cabbit_ce2`.
 To use circe encoders add this artifact to your build.sbt:
 ```sbt
-libraryDependencies += "ru.delimobil" %% "cabbit-circe" % "0.2.0-rc1"
+libraryDependencies += "ru.delimobil" %% "cabbit-circe" % "0.2.0-RC3"
 ```
 
 ## Teaser
