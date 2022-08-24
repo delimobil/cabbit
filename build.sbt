@@ -1,11 +1,11 @@
 ThisBuild / organization := "ru.delimobil"
 ThisBuild / scalaVersion := "2.13.8"
-ThisBuild / crossScalaVersions ++= Seq("2.12.15", "3.1.2")
+ThisBuild / crossScalaVersions ++= Seq("2.12.16", "3.1.3")
 
 val kindProjectorVersion = "0.13.2"
 val catsVersion = "2.6.1"
 val fs2VersionCE2 = "2.5.11"
-val fs2VersionCE3 = "3.2.8"
+val fs2VersionCE3 = "3.2.12"
 val circeVersion = "0.14.1"
 val amqpClientVersion = "5.13.1"
 
