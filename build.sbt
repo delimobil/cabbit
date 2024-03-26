@@ -14,7 +14,10 @@ val scalatestVersion = "3.2.11"
 val testContainersVersion = "0.40.2"
 val slf4jVersion = "1.7.36"
 
+val libVersion = "0.2.0-RC4"
+
 val publishSettings = Seq(
+  version := libVersion,
   // sonatype config
   publishTo := sonatypePublishToBundle.value,
   ThisBuild / sonatypeCredentialHost := "s01.oss.sonatype.org",
@@ -35,7 +38,6 @@ val publishSettings = Seq(
 )
 
 val commonSettings = Seq(
-  version := "0.2.0-RC4",
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((3, _)) =>
