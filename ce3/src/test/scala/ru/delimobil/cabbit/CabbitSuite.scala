@@ -66,7 +66,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
         for {
           conn <- cont.makeConnection[IO]
           ch <- conn.createChannel
-          dispatcher <- Dispatcher[IO]
+          dispatcher <- Dispatcher.parallel[IO]
         } yield (cont, shutdown, dispatcher, conn, ch)
       }
       .allocated
