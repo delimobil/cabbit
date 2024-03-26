@@ -1,11 +1,11 @@
 ThisBuild / organization := "ru.delimobil"
-ThisBuild / scalaVersion := "2.13.10"
-ThisBuild / crossScalaVersions ++= Seq("2.12.17", "3.2.1")
+ThisBuild / scalaVersion := "2.13.13"
+ThisBuild / crossScalaVersions ++= Seq("2.12.19", "3.2.2")
 
-val kindProjectorVersion = "0.13.2"
+val kindProjectorVersion = "0.13.3"
 val catsVersion = "2.6.1"
 val fs2VersionCE2 = "2.5.11"
-val fs2VersionCE3 = "3.2.14"
+val fs2VersionCE3 = "3.10.0"
 val circeVersion = "0.14.1"
 val amqpClientVersion = "5.13.1"
 
@@ -35,7 +35,7 @@ val publishSettings = Seq(
 )
 
 val commonSettings = Seq(
-  version := "0.2.0-RC3",
+  version := "0.2.0-RC4",
   scalacOptions ++= {
     CrossVersion.partialVersion(scalaVersion.value) match {
       case Some((3, _)) =>
