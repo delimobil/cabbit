@@ -4,7 +4,7 @@ ThisBuild / crossScalaVersions ++= Seq("2.12.19", "3.2.2")
 
 val kindProjectorVersion = "0.13.3"
 val catsVersion = "2.6.1"
-val fs2VersionCE2 = "2.5.11"
+val fs2VersionCE2 = "3.10.2"
 val fs2VersionCE3 = "3.10.0"
 val circeVersion = "0.14.1"
 val amqpClientVersion = "5.13.1"
