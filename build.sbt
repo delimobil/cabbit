@@ -1,11 +1,11 @@
 ThisBuild / organization := "ru.delimobil"
-ThisBuild / scalaVersion := "2.13.13"
-ThisBuild / crossScalaVersions ++= Seq("2.12.19", "3.2.2")
+ThisBuild / scalaVersion := "2.13.16"
+ThisBuild / crossScalaVersions ++= Seq("2.12.20", "3.4.1")
 
 val kindProjectorVersion = "0.13.3"
 val catsVersion = "2.6.1"
-val fs2VersionCE2 = "2.5.11"
-val fs2VersionCE3 = "3.10.0"
+val fs2VersionCE2 = "2.5.12"
+val fs2VersionCE3 = "3.10.2"
 val circeVersion = "0.14.1"
 val amqpClientVersion = "5.13.1"
 
@@ -14,7 +14,7 @@ val scalatestVersion = "3.2.11"
 val testContainersVersion = "0.40.2"
 val slf4jVersion = "1.7.36"
 
-val libVersion = "0.2.0-RC4"
+val libVersion = "0.2.0-RC5"
 
 val publishSettings = Seq(
   version := libVersion,
