@@ -1,6 +1,5 @@
 package ru.delimobil.cabbit.client
 
-import cats.Functor
 import cats.MonadThrow
 import cats.syntax.applicativeError._
 import cats.syntax.functor._
@@ -26,8 +25,7 @@ private[client] object RabbitClientChannelBlocking {
 
   def make[F[_]](channel: client.Channel, blocker: Blocker[F])(implicit
       m: MonadThrow[F],
-      mk: SemaphoreMake[F],
-      func: Functor[F]
+      mk: SemaphoreMake[F]
   ): F[RabbitClientChannelBlocking[F]] =
     mk.make(1).map(new RabbitClientChannelBlocking[F](_, channel, blocker))
 }

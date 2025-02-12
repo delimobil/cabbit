@@ -18,7 +18,8 @@ case class CabbitConfig(
     connectionTimeout: FiniteDuration = 60.seconds,
     username: Option[String] = None,
     password: Option[String] = None,
-    automaticRecovery: Boolean = true
+    automaticRecovery: Boolean = true,
+    heartbeatInterval: Option[FiniteDuration] = None
 )
 
 object CabbitConfig {
@@ -47,6 +48,7 @@ object CabbitConfig {
       factory.setVirtualHost(config.virtualHost)
       factory.setConnectionTimeout(config.connectionTimeout.toMillis.toInt)
       factory.setAutomaticRecoveryEnabled(config.automaticRecovery)
+      config.heartbeatInterval.map(_.toSeconds.toInt).foreach(factory.setRequestedHeartbeat)
       if (ssl) context.fold(factory.useSslProtocol())(factory.useSslProtocol)
       factory.setSaslConfig(saslConfig)
       config.username.foreach(factory.setUsername)
