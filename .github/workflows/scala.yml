@@ -24,4 +24,4 @@ jobs:
       - uses: sbt/setup-sbt@v1
       - name: Build and test
         shell: bash
-        run: sbt -v +test
+        run: sbt -v "ce3/ test"
