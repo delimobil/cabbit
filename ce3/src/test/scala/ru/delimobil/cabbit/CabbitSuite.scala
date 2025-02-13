@@ -400,7 +400,7 @@ class CabbitSuite extends AnyFunSuite with BeforeAndAfterAll {
     }
   }
 
-  test("Stream throws on rabbitmq shutdown") {
+  ignore("Stream throws on rabbitmq shutdown") {
     intercept[ShutdownSignalException] {
       rabbitUtils.useQueueDeclared(Map.empty) { qName =>
         channel

@@ -17,7 +17,8 @@ import fs2.concurrent.Channel
 import ru.delimobil.cabbit.client.RabbitClientConsumerProvider
 
 private[client] final class ChannelDeferredConsumerProvider[F[_]: Async](
-    dispatcher: Dispatcher[F]
+    dispatcher: Dispatcher[F],
+    shouldRaiseOnShutdown: Boolean
 ) extends RabbitClientConsumerProvider[F, Stream[F, *]] {
 
   def provide(prefetchCount: Int): F[(Consumer, Stream[F, Delivery])] =
@@ -48,7 +49,8 @@ private[client] final class ChannelDeferredConsumerProvider[F[_]: Async](
         close()
 
       def handleShutdownSignal(consumerTag: String, sig: ShutdownSignalException): Unit =
-        raise(sig)
+        if (shouldRaiseOnShutdown) raise(sig)
+        else {}
 
       def handleRecoverOk(consumerTag: String): Unit = {}
 
@@ -64,6 +66,6 @@ private[client] final class ChannelDeferredConsumerProvider[F[_]: Async](
 
 object ChannelDeferredConsumerProvider {
 
-  def make[F[_]: Async]: Resource[F, ChannelDeferredConsumerProvider[F]] =
-    Dispatcher.parallel[F].map(new ChannelDeferredConsumerProvider[F](_))
+  def make[F[_]: Async](shouldRaiseOnShutdown: Boolean): Resource[F, ChannelDeferredConsumerProvider[F]] =
+    Dispatcher.parallel[F].map(new ChannelDeferredConsumerProvider[F](_, shouldRaiseOnShutdown))
 }
