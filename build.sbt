@@ -1,5 +1,5 @@
 ThisBuild / organization := "ru.delimobil"
-ThisBuild / scalaVersion := "2.13.16"
+ThisBuild / scalaVersion := "2.13.15"
 ThisBuild / crossScalaVersions ++= Seq("2.12.20", "3.4.1")
 
 val kindProjectorVersion = "0.13.3"
@@ -14,7 +14,7 @@ val scalatestVersion = "3.2.11"
 val testContainersVersion = "0.40.2"
 val slf4jVersion = "1.7.36"
 
-val libVersion = "0.2.0-RC5"
+val libVersion = "0.2.0-RC6"
 
 val publishSettings = Seq(
   version := libVersion,
