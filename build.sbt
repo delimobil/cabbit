@@ -1,5 +1,5 @@
 ThisBuild / organization := "ru.delimobil"
-ThisBuild / scalaVersion := "2.13.15"
+ThisBuild / scalaVersion := "2.13.16"
 ThisBuild / crossScalaVersions ++= Seq("2.12.20", "3.4.1")
 
 val kindProjectorVersion = "0.13.3"
