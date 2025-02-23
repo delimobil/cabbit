@@ -66,6 +66,8 @@ private[client] final class ChannelDeferredConsumerProvider[F[_]: Async](
 
 object ChannelDeferredConsumerProvider {
 
-  def make[F[_]: Async](shouldRaiseOnShutdown: Boolean): Resource[F, ChannelDeferredConsumerProvider[F]] =
+  def make[F[_]: Async](
+      shouldRaiseOnShutdown: Boolean
+  ): Resource[F, ChannelDeferredConsumerProvider[F]] =
     Dispatcher.parallel[F].map(new ChannelDeferredConsumerProvider[F](_, shouldRaiseOnShutdown))
 }
